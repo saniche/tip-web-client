@@ -1,0 +1,53 @@
+<section class="dashboard-hero">
+  <div>
+    <p class="dashboard-kicker">Signal-first workflow</p>
+    <h1>Manage authentication and job delivery from normalization to application.</h1>
+    <p>
+      This starter keeps view state in Angular signals and leaves the HTTP boundary isolated for the
+      backend integration.
+    </p>
+  </div>
+
+  <div class="dashboard-actions">
+    <a routerLink="/auth">Open auth flow</a>
+    <a routerLink="/jobs">Review pipeline</a>
+  </div>
+</section>
+
+<section class="dashboard-grid">
+  <article class="dashboard-card">
+    <span>Authentication</span>
+    <strong>{{ isAuthenticated() ? 'Connected' : 'Pending connection' }}</strong>
+    <p>{{ auth().email }}</p>
+  </article>
+
+  @for (metric of stageMetrics(); track metric.stage) {
+    <article class="dashboard-card">
+      <span>{{ metric.label }}</span>
+      <strong>{{ metric.count }}</strong>
+      <p>{{ metric.count === 1 ? 'job ready' : 'jobs ready' }}</p>
+    </article>
+  }
+</section>
+
+<section class="dashboard-list">
+  <div class="dashboard-list__header">
+    <h2>Recent jobs</h2>
+    <span>{{ jobs().length }} tracked</span>
+  </div>
+
+  <ul>
+    @for (job of jobs(); track job.id) {
+      <li>
+        <div>
+          <strong>{{ job.title }}</strong>
+          <p>{{ job.company }} · {{ job.location }}</p>
+        </div>
+        <div>
+          <span>{{ job.stage }}</span>
+          <small>{{ job.updatedAt }}</small>
+        </div>
+      </li>
+    }
+  </ul>
+</section>

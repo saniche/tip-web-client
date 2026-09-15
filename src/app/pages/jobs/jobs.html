@@ -1,0 +1,40 @@
+<section class="jobs-header">
+  <div>
+    <p class="jobs-kicker">Pipeline operations</p>
+    <h1>Process jobs stage by stage.</h1>
+  </div>
+  <p>Each card represents the signal-backed queue for a workflow stage.</p>
+</section>
+
+<section class="jobs-grid">
+  @for (metric of stageMetrics(); track metric.stage) {
+    <article class="jobs-column">
+      <div class="jobs-column__header">
+        <h2>{{ metric.label }}</h2>
+        <span>{{ metric.count }}</span>
+      </div>
+
+      @if (metric.jobs.length > 0) {
+        <ul>
+          @for (job of metric.jobs; track job.id) {
+            <li>
+              <div>
+                <strong>{{ job.title }}</strong>
+                <p>{{ job.company }} · {{ job.location }}</p>
+                <small>{{ job.updatedAt }}</small>
+              </div>
+
+              @if (job.stage !== finalStage) {
+                <button type="button" (click)="advanceJob(job.id)">Move forward</button>
+              } @else {
+                <span class="jobs-complete">Ready to apply</span>
+              }
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="jobs-empty">No jobs in this stage.</p>
+      }
+    </article>
+  }
+</section>

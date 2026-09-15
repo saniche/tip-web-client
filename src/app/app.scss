@@ -1,0 +1,72 @@
+:host {
+  min-height: 100dvh;
+  display: block;
+  background: #f4f7fb;
+  color: #17324d;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+.app-shell {
+  min-height: 100dvh;
+}
+
+.app-shell__header {
+  display: grid;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: #0f2740;
+  color: #fff;
+}
+
+.app-shell__brand {
+  color: inherit;
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.app-shell__tagline {
+  margin: 0.5rem 0 0;
+  color: #d0ddec;
+}
+
+.app-shell__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.app-shell__nav a,
+.app-shell__session button {
+  border-radius: 999px;
+  border: 1px solid #82a2c2;
+  padding: 0.5rem 0.9rem;
+  background: transparent;
+  color: #fff;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.app-shell__nav a.is-active {
+  background: #fff;
+  color: #0f2740;
+}
+
+.app-shell__session {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.app-shell__status {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 1rem 1.5rem;
+  background: #dfeaf6;
+}
+
+.app-shell__main {
+  padding: 1.5rem;
+}
