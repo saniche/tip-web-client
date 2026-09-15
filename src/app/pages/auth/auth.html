@@ -1,0 +1,26 @@
+<section class="auth-card">
+  <div>
+    <p class="auth-kicker">API authentication</p>
+    <h1>Start an authenticated session.</h1>
+    <p>Use this form as the entry point for the backend login flow.</p>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <label>
+      Email
+      <input type="email" formControlName="email" placeholder="name@example.com" />
+    </label>
+
+    <label>
+      Password
+      <input type="password" formControlName="password" placeholder="••••••••" />
+    </label>
+
+    <button type="submit">Authenticate</button>
+  </form>
+
+  <section class="auth-status" aria-label="Current session">
+    <strong>{{ isAuthenticated() ? 'Authenticated' : 'Awaiting login' }}</strong>
+    <p>{{ auth().email }}</p>
+  </section>
+</section>
