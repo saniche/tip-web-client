@@ -1,5 +1,5 @@
-<section class="dashboard-hero">
-  <div>
+<section class="dashboard-hero row g-4 align-items-end">
+  <div class="col-12 col-xl-8">
     <p class="dashboard-kicker">Signal-first workflow</p>
     <h1>Manage authentication and job delivery from normalization to application.</h1>
     <p>
@@ -8,21 +8,21 @@
     </p>
   </div>
 
-  <div class="dashboard-actions">
-    <a routerLink="/auth">Open auth flow</a>
-    <a routerLink="/jobs">Review pipeline</a>
+  <div class="dashboard-actions col-12 col-xl-4">
+    <a class="btn btn-primary" routerLink="/auth">Open auth flow</a>
+    <a class="btn btn-outline-primary" routerLink="/jobs">Review pipeline</a>
   </div>
 </section>
 
-<section class="dashboard-grid">
-  <article class="dashboard-card">
+<section class="dashboard-grid row g-3">
+  <article class="dashboard-card col-12 col-sm-6 col-xl-3">
     <span>Authentication</span>
     <strong>{{ isAuthenticated() ? 'Connected' : 'Pending connection' }}</strong>
     <p>{{ auth().email }}</p>
   </article>
 
   @for (metric of stageMetrics(); track metric.stage) {
-    <article class="dashboard-card">
+    <article class="dashboard-card col-12 col-sm-6 col-xl-3">
       <span>{{ metric.label }}</span>
       <strong>{{ metric.count }}</strong>
       <p>{{ metric.count === 1 ? 'job ready' : 'jobs ready' }}</p>

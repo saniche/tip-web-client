@@ -1,14 +1,14 @@
-<section class="jobs-header">
-  <div>
+<section class="jobs-header row g-3 align-items-end">
+  <div class="col-12 col-lg-8">
     <p class="jobs-kicker">Pipeline operations</p>
     <h1>Process jobs stage by stage.</h1>
   </div>
-  <p>Each card represents the signal-backed queue for a workflow stage.</p>
+  <p class="col-12 col-lg-4 mb-0">Each card represents the signal-backed queue for a workflow stage.</p>
 </section>
 
-<section class="jobs-grid">
+<section class="jobs-grid row g-3">
   @for (metric of stageMetrics(); track metric.stage) {
-    <article class="jobs-column">
+    <article class="jobs-column col-12 col-md-6 col-xl-3">
       <div class="jobs-column__header">
         <h2>{{ metric.label }}</h2>
         <span>{{ metric.count }}</span>
@@ -25,7 +25,7 @@
               </div>
 
               @if (job.stage !== finalStage) {
-                <button type="button" (click)="advanceJob(job.id)">Move forward</button>
+                <button class="btn btn-sm btn-primary" type="button" (click)="advanceJob(job.id)">Move forward</button>
               } @else {
                 <span class="jobs-complete">Ready to apply</span>
               }

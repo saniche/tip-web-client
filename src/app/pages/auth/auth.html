@@ -1,22 +1,24 @@
-<section class="auth-card">
-  <div>
+<section class="auth-card mx-auto">
+  <div class="auth-card__intro">
     <p class="auth-kicker">API authentication</p>
     <h1>Start an authenticated session.</h1>
     <p>Use this form as the entry point for the backend login flow.</p>
   </div>
 
-  <form [formGroup]="form" (ngSubmit)="submit()">
-    <label>
+  <form class="row g-3" [formGroup]="form" (ngSubmit)="submit()">
+    <label class="col-12">
       Email
-      <input type="email" formControlName="email" placeholder="name@example.com" />
+      <input class="form-control" type="email" formControlName="email" placeholder="name@example.com" />
     </label>
 
-    <label>
+    <label class="col-12">
       Password
-      <input type="password" formControlName="password" placeholder="••••••••" />
+      <input class="form-control" type="password" formControlName="password" placeholder="••••••••" />
     </label>
 
-    <button type="submit">Authenticate</button>
+    <div class="col-12">
+      <button class="btn btn-primary w-100" type="submit">Authenticate</button>
+    </div>
   </form>
 
   <section class="auth-status" aria-label="Current session">

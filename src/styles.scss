@@ -1,1 +1,32 @@
-/* You can add global styles to this file, and also import other style files */
+@use 'bootstrap/scss/bootstrap';
+
+:root {
+	--tip-ink: #17324d;
+	--tip-navy: #0f2740;
+	--tip-blue: #3d6c9b;
+	--tip-coral: #e4775c;
+	--tip-surface: #ffffff;
+	--tip-muted: #54718f;
+	--tip-border: #dce7f2;
+	--tip-page: #f4f7fb;
+}
+
+html {
+	min-width: 320px;
+	background: var(--tip-page);
+}
+
+body {
+	min-width: 320px;
+	margin: 0;
+	color: var(--tip-ink);
+	background:
+		radial-gradient(circle at 100% 0, rgba(228, 119, 92, 0.14), transparent 25rem),
+		var(--tip-page);
+	font-family: 'Aptos', 'Segoe UI', sans-serif;
+}
+
+button,
+input {
+	font: inherit;
+}
