@@ -1,0 +1,71 @@
+<section class="auth-card mx-auto">
+	<div class="auth-card__intro">
+		<p class="auth-kicker">API registration</p>
+		<h1>Create your TIP account.</h1>
+		<p>Set up an account to start an authenticated workflow session.</p>
+	</div>
+
+    @if(isAuthenticated()) {
+        <section class="auth-status auth-status--success" aria-live="polite">
+            <p>You are already authenticated.</p> 
+            <a href="/dashboard" class="btn btn-primary">Go to Dashboard</a>
+
+        </section>
+    }
+    @else {
+
+	    <form class="row g-3" [formGroup]="form" (ngSubmit)="submit()">
+		<label class="col-12">
+			Display name
+			<input class="form-control" type="text" formControlName="displayName" placeholder="Talent Operations" autocomplete="name" />
+			@if (form.controls.displayName.invalid && form.controls.displayName.touched) {
+				<span class="field-error">Enter at least 2 characters.</span>
+			}
+		</label>
+
+		<label class="col-12">
+			Email
+			<input class="form-control" type="email" formControlName="email" placeholder="name@example.com" autocomplete="email" />
+			@if (form.controls.email.invalid && form.controls.email.touched) {
+				<span class="field-error">Enter a valid email address.</span>
+			}
+		</label>
+
+		<label class="col-12">
+			Password
+			<input class="form-control" type="password" formControlName="password" placeholder="At least 8 characters" autocomplete="new-password" />
+			@if (form.controls.password.invalid && form.controls.password.touched) {
+				<span class="field-error">Use at least 8 characters.</span>
+			}
+		</label>
+
+		<label class="col-12">
+			Confirm password
+			<input class="form-control" type="password" formControlName="passwordConfimmation" placeholder="Repeat your password" autocomplete="new-password" />
+			@if (form.controls.passwordConfimmation.touched && form.hasError('passwordsMismatch')) {
+				<span class="field-error">Passwords must match.</span>
+			}
+		</label>
+
+		<div class="col-12">
+			<button class="btn btn-primary w-100" type="submit">Create account</button>
+		</div>
+	</form>
+    }
+    
+	@if (registrationComplete) {
+		<section class="auth-status auth-status--success" aria-live="polite">
+			<strong>Registration complete</strong>
+			<p>Your account is ready to use.</p>
+            <!-- Show link to navigate to the dashbord -->
+            <a href="/dashboard" class="btn btn-primary">Go to Dashboard</a>
+		</section>
+	}
+
+	@if (registrationError) {
+		<section class="auth-status auth-status--error" aria-live="polite">
+			<strong>Registration failed</strong>
+			<p>{{ registrationError }}</p>
+		</section>
+	}
+</section>

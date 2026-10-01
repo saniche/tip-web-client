@@ -1,3 +1,4 @@
+import { provideHttpClient } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { JOB_STAGES } from '../models/workflow';
 import { AppStore } from './app-store';
@@ -6,7 +7,9 @@ describe('AppStore', () => {
   let service: AppStore;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient()],
+    });
     service = TestBed.inject(AppStore);
   });
 
@@ -14,12 +17,9 @@ describe('AppStore', () => {
     expect(service).toBeTruthy();
   });
 
-  it('should authenticate with signal state', () => {
-    service.login('talent.ops@tip.dev', 'changeme');
-
-    expect(service.isAuthenticated()).toBe(true);
-    expect(service.auth().email).toBe('talent.ops@tip.dev');
-    expect(service.auth().accessToken).toBe('demo-session-token');
+  it('should start with an unauthenticated workflow state', () => {
+    expect(service.isAuthenticated()).toBe(false);
+    expect(service.nextAction()).toContain('Authenticate with the API');
   });
 
   it('should advance jobs through the workflow without exceeding the final stage', () => {

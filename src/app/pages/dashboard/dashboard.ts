@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AppStore } from '../../core/state/app-store';
+import { AuthStore } from '../../core/state/auth-store';
 
 @Component({
   imports: [RouterLink],
@@ -10,9 +11,9 @@ import { AppStore } from '../../core/state/app-store';
 })
 export class Dashboard {
   private readonly store = inject(AppStore);
-
-  protected readonly auth = this.store.auth;
-  protected readonly isAuthenticated = this.store.isAuthenticated;
+  private readonly authStore = inject(AuthStore);
+  protected readonly auth = this.authStore.auth;
+  protected readonly isAuthenticated = this.authStore.isAuthenticated;
   protected readonly jobs = this.store.jobs;
   protected readonly stageMetrics = this.store.stageMetrics;
 }

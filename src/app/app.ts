@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AppStore } from './core/state/app-store';
+import { AuthStore } from './core/state/auth-store';
 
 @Component({
   imports: [RouterOutlet, RouterLink, RouterLinkActive],
@@ -10,13 +11,14 @@ import { AppStore } from './core/state/app-store';
 })
 export class App {
   private readonly store = inject(AppStore);
+  private readonly authStore = inject(AuthStore);
 
   protected readonly appName = 'Talent Intelligent Platform';
-  protected readonly auth = this.store.auth;
-  protected readonly isAuthenticated = this.store.isAuthenticated;
+  protected readonly auth = this.authStore.auth;
+  protected readonly isAuthenticated = this.authStore.isAuthenticated;
   protected readonly nextAction = this.store.nextAction;
 
   protected logout(): void {
-    this.store.logout();
+    this.authStore.logout();
   }
 }

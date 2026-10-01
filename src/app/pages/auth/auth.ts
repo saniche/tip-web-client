@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AppStore } from '../../core/state/app-store';
+import { AuthStore } from '../../core/state/auth-store';
 
 @Component({
   imports: [ReactiveFormsModule],
@@ -10,14 +11,18 @@ import { AppStore } from '../../core/state/app-store';
 })
 export class Auth {
   private readonly formBuilder = inject(NonNullableFormBuilder);
-  private readonly store = inject(AppStore);
+  private readonly authStore = inject(AuthStore);
+  
 
-  protected readonly auth = this.store.auth;
-  protected readonly isAuthenticated = this.store.isAuthenticated;
+  protected readonly isAuthenticated = this.authStore.isAuthenticated;
+  protected readonly auth = this.authStore.auth;
+  
   protected readonly form = this.formBuilder.group({
     email: ['talent.ops@tip.dev', [Validators.required, Validators.email]],
     password: ['changeme', [Validators.required]],
   });
+
+  protected registrationError : string | null = null;
 
   protected submit(): void {
     if (this.form.invalid) {
@@ -26,6 +31,13 @@ export class Auth {
     }
 
     const { email, password } = this.form.getRawValue();
-    this.store.login(email, password);
+    this.authStore.login(email, password).subscribe({
+      next: () => {
+        console.log('Login successful');
+      },
+      error: (err) => {
+        console.error('Login failed', err);
+      }
+    });
   }
 }

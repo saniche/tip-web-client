@@ -1,17 +1,12 @@
-import { Injectable, computed, signal } from '@angular/core';
-import { AuthSession, JOB_STAGES, JobStage, JobWorkflowItem, StageMetric } from '../models/workflow';
+import { Injectable, computed, signal, inject } from '@angular/core';
+import { JOB_STAGES, JobStage, JobWorkflowItem, StageMetric } from '../models/workflow';
+import { AuthStore } from './auth-store';
 
 const STAGE_LABELS: Record<JobStage, string> = {
   normalization: 'Normalization',
   qualification: 'Qualification',
   matching: 'Matching',
   application: 'Application',
-};
-
-const INITIAL_AUTH_SESSION: AuthSession = {
-  email: 'guest@tip.local',
-  accessToken: null,
-  isAuthenticated: false,
 };
 
 const INITIAL_JOBS: JobWorkflowItem[] = [
@@ -51,12 +46,12 @@ const INITIAL_JOBS: JobWorkflowItem[] = [
 
 @Injectable({ providedIn: 'root' })
 export class AppStore {
-  private readonly authState = signal<AuthSession>(INITIAL_AUTH_SESSION);
+  private readonly authStore = inject(AuthStore);
   private readonly jobsState = signal<JobWorkflowItem[]>(INITIAL_JOBS);
 
-  readonly auth = this.authState.asReadonly();
+  readonly isAuthenticated = computed(() => this.authStore.isAuthenticated());
+
   readonly jobs = this.jobsState.asReadonly();
-  readonly isAuthenticated = computed(() => this.authState().isAuthenticated);
   readonly totalJobs = computed(() => this.jobsState().length);
   readonly stageMetrics = computed<StageMetric[]>(() =>
     JOB_STAGES.map((stage) => {
@@ -82,17 +77,6 @@ export class AppStore {
       : 'All jobs are already prepared for application.';
   });
 
-  login(email: string, _password: string): void {
-    this.authState.set({
-      email,
-      accessToken: 'demo-session-token',
-      isAuthenticated: true,
-    });
-  }
-
-  logout(): void {
-    this.authState.set(INITIAL_AUTH_SESSION);
-  }
 
   advanceJob(jobId: string): void {
     this.jobsState.update((jobs) =>

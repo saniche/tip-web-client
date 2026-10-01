@@ -2,24 +2,21 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { JobWorkflowItem } from '../models/workflow';
+import { environment } from '../../../environments/environment';
+import { RegisterUserRequest, LoginRequest, LoginResponse, RegisterTokenResponse } from '../models/auth.models';
 
-interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-interface LoginResponse {
-  email: string;
-  accessToken: string;
-}
 
 @Injectable({ providedIn: 'root' })
 export class TipApi {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = 'http://localhost:3000/api';
+  private readonly baseUrl = environment.baseUrl;
 
   login(payload: LoginRequest): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.baseUrl}/auth/login`, payload);
+  }
+
+  register(payload: RegisterUserRequest): Observable<RegisterTokenResponse>{
+     return this.http.post<RegisterTokenResponse>(`${this.baseUrl}/auth/register`, payload);
   }
 
   listJobs(): Observable<JobWorkflowItem[]> {

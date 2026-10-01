@@ -7,11 +7,6 @@ export const JOB_STAGES = [
 
 export type JobStage = (typeof JOB_STAGES)[number];
 
-export interface AuthSession {
-  email: string;
-  accessToken: string | null;
-  isAuthenticated: boolean;
-}
 
 export interface JobWorkflowItem {
   id: string;
