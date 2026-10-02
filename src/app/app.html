@@ -4,7 +4,7 @@
       <div class="app-shell__identity">
         <a class="app-shell__brand" routerLink="/dashboard">{{ appName }}</a>
         <p class="app-shell__tagline">
-        Angular 22 skeleton for auth, job normalization, and application workflows.
+        Job Normalization, and application workflows.
         </p>
       </div>
 
@@ -12,16 +12,15 @@
         <a routerLink="/dashboard" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }">
           Dashboard
         </a>
-        <a routerLink="/auth" routerLinkActive="is-active">Auth</a>
         <a routerLink="/jobs" routerLinkActive="is-active">Jobs</a>
       </nav>
 
       <div class="app-shell__session">
         @if (isAuthenticated()) {
-          <span>{{ auth().email }}</span>
+          <span>{{ auth().user?.email }}</span>
           <button class="btn btn-sm" type="button" (click)="logout()">Logout</button>
         } @else {
-          <span>Guest session</span>
+          <a routerLink="/auth" routerLinkActive="is-active">Login</a>
         }
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AppStore } from '../../core/state/app-store';
 import { AuthStore } from '../../core/state/auth-store';
@@ -15,16 +15,20 @@ export class Auth {
   
 
   protected readonly isAuthenticated = this.authStore.isAuthenticated;
-  protected readonly auth = this.authStore.auth;
+  protected readonly auth = this.authStore.authSession;
   
   protected readonly form = this.formBuilder.group({
-    email: ['talent.ops@tip.dev', [Validators.required, Validators.email]],
-    password: ['changeme', [Validators.required]],
+    email: ['', [Validators.required, Validators.email]],
+    password: ['', [Validators.required]],
   });
 
-  protected registrationError : string | null = null;
+
+  protected authenticationError  = signal (null);
 
   protected submit(): void {
+
+    this.authenticationError.set(null);
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -34,8 +38,10 @@ export class Auth {
     this.authStore.login(email, password).subscribe({
       next: () => {
         console.log('Login successful');
+        navigation.navigate('/');
       },
       error: (err) => {
+        this.authenticationError.set(err.message);
         console.error('Login failed', err);
       }
     });

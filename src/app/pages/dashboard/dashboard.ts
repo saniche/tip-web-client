@@ -12,7 +12,7 @@ import { AuthStore } from '../../core/state/auth-store';
 export class Dashboard {
   private readonly store = inject(AppStore);
   private readonly authStore = inject(AuthStore);
-  protected readonly auth = this.authStore.auth;
+  protected readonly auth = this.authStore.authSession;
   protected readonly isAuthenticated = this.authStore.isAuthenticated;
   protected readonly jobs = this.store.jobs;
   protected readonly stageMetrics = this.store.stageMetrics;

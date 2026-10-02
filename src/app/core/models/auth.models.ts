@@ -7,13 +7,11 @@ export interface RegisterUserRequest {
 }
 
 export interface LoginRequest {
-  email: string;
+  username: string;
   password: string;
 }
 
-export interface LoginResponse {
-  email: string;
-  accessToken: string;
+export interface LoginResponse extends RegisterTokenResponse {
 }
 
 export interface RegisterTokenResponse{
@@ -23,7 +21,12 @@ export interface RegisterTokenResponse{
 
 
 export interface AuthSession {
-  email: string;
+  user: User | null;
   accessToken: string | null;
-  isAuthenticated: boolean;
+}
+
+
+export interface User {
+  email: string;
+  name: string | null;
 }

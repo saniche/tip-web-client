@@ -1,34 +1,26 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
+import { Injectable, inject, computed } from '@angular/core';
+import { LocalAuthStore } from './local-auth-store';
 import { TipApi } from '../api/tip-api';
-import { AuthSession, RegisterUserRequest } from '../models/auth.models';
+import { RegisterUserRequest } from '../models/auth.models';
 import { Observable } from 'rxjs';
-
-
-
-const INITIAL_AUTH_SESSION: AuthSession = {
-  email: 'guest@tip.local',
-  accessToken: null,
-  isAuthenticated: false,
-};
 
 @Injectable({ providedIn: 'root' })
 export class AuthStore {
-    tipApi: TipApi = inject(TipApi);
+  
+  tipApi: TipApi = inject(TipApi);
+  localAuthStore: LocalAuthStore = inject(LocalAuthStore);
 
-  private readonly authState = signal<AuthSession>(INITIAL_AUTH_SESSION);
-  readonly auth = this.authState.asReadonly();
 
-  readonly isAuthenticated = computed(() => this.authState().isAuthenticated);
+  readonly isAuthenticated = computed(() => this.localAuthStore.isAuthenticated());
+  readonly authSession = computed(() => this.localAuthStore.getSession());
 
    login(email: string, _password: string): Observable<void> {
+
     return new Observable<void>((observer)=>{
-    this.tipApi.login({email, password: _password}).subscribe({
+    
+    this.tipApi.login({username: email, password: _password}).subscribe({
       next: (response) => {
-        this.authState.set({
-          email,
-          accessToken: response.accessToken,
-          isAuthenticated: true,
-        });
+        this.localAuthStore.login(response.access_token, { email, name: null }, 3600 * 23); // Example expiry of 23hour
         observer.next();
         observer.complete();
 
@@ -43,12 +35,7 @@ export class AuthStore {
       return new Observable<void>((observer) => {
         this.tipApi.register(registerpaylod).subscribe({
           next: (response) => {
-              this.authState.set({
-                email: registerpaylod.email,
-                accessToken: response.access_token,
-                isAuthenticated: true,
-              });
-            console.log('Registration successful', response);
+            this.localAuthStore.login(response.access_token, { email: registerpaylod.email, name: null }, 3600 * 23); // Example expiry of 23hour
             observer.next();
             observer.complete();
           },
@@ -58,12 +45,15 @@ export class AuthStore {
           },
         });
 
-        // Simulate a registration API call
-        console.log(`Registering user with email: ${registerpaylod.email} and password: ${registerpaylod.password}`);
       });
     }
   
     logout(): void {
-      this.authState.set(INITIAL_AUTH_SESSION);
+      this.localAuthStore.logout();
+      this.localAuthStore.rehydrate();
+    }
+
+    Refresh(): void {
+      this.localAuthStore.rehydrate();
     }
 }

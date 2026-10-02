@@ -21,16 +21,16 @@
       <button class="btn btn-primary w-100" type="submit">Authenticate</button>
     </div>
   </form>
-  @if (registrationError) {
+  @if (authenticationError()) {
   <section class="auth-status auth-status--error" aria-live="polite">
-    <strong>Registration failed</strong>
-    <p>{{ registrationError }}</p>
+    <strong>Login failed</strong>
+    <p>{{ authenticationError() }}</p>
   </section>
   }
   }
   <section class="auth-status" aria-label="Current session">
     <strong>{{ isAuthenticated() ? 'Authenticated' : 'Awaiting login' }}</strong>
-    <p>{{ auth().email }}</p>
+    <p>{{ auth().user?.email }}</p>
   </section>
 
   <a class="auth-link" href="/auth/register">Create a new account</a>
