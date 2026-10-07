@@ -3,6 +3,7 @@ import { Auth } from './pages/auth/auth';
 import { Register } from './pages/auth/register/register';
 import { Dashboard } from './pages/dashboard/dashboard';
 import { Jobs } from './pages/jobs/jobs';
+import { Profile } from './pages/profile/profile';
 
 export const routes: Routes = [
   {
@@ -25,6 +26,10 @@ export const routes: Routes = [
   {
     path: 'jobs',
     component: Jobs,
+  },
+  {
+    path: 'profile',
+    component: Profile,
   },
   {
     path: '**',

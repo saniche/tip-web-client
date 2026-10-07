@@ -1,0 +1,122 @@
+@if (!isAuthenticated()) {
+  <section class="profile-card">
+    <p class="profile-kicker">Profile builder</p>
+    <h1>Sign in to build your profile.</h1>
+    <p>Your profile and uploaded documents are available after authentication.</p>
+    <a class="btn btn-primary" routerLink="/auth">Open auth flow</a>
+  </section>
+} @else {
+  <section class="profile-header row g-3 align-items-end">
+    <div class="col-12 col-lg-8">
+      <p class="profile-kicker">Profile builder</p>
+      <h1>Build your professional profile.</h1>
+      <p>Upload source documents for asynchronous processing, then review and refine the returned profile.</p>
+    </div>
+    <div class="col-12 col-lg-4 d-flex gap-2 justify-content-lg-end">
+      <button class="btn btn-outline-primary" type="button" (click)="load()" [disabled]="isLoading()">Refresh</button>
+      <button class="btn btn-primary" type="button" (click)="save()" [disabled]="isSaving()">Save profile</button>
+    </div>
+  </section>
+
+  @if (error() || errorMessage()) {
+    <section class="profile-alert profile-alert--error" aria-live="polite">
+      {{ errorMessage() || error() }}
+    </section>
+  }
+  @if (saveMessage()) {
+    <section class="profile-alert profile-alert--success" aria-live="polite">{{ saveMessage() }}</section>
+  }
+  @if (processingNotice()) {
+    <section class="profile-alert profile-alert--notice" role="status">{{ processingNotice() }}</section>
+  }
+
+  <section class="profile-card">
+    <div class="profile-card__heading">
+      <div>
+        <h2>Import source files</h2>
+        <p>Accepted formats: Markdown, DOCX, and PDF. You can select multiple files.</p>
+      </div>
+      <label class="btn btn-outline-primary">
+        Choose files
+        <input class="visually-hidden" type="file" accept=".md,.docx,.pdf" multiple
+          [disabled]="isPreparingMerge() || isUploading()" (change)="onFilesSelected($event)" />
+      </label>
+    </div>
+    <label class="profile-merge-toggle">
+      <input type="checkbox" [checked]="mergeEnabled()"
+        [disabled]="isPreparingMerge() || isUploading()" (change)="onMergeToggle($event)" />
+      Merge selected files into one document
+    </label>
+    <p class="profile-merge-hint">Enabled by default. Files are combined locally with their filenames as section headings.</p>
+    @if (selectedFileNames().length > 0) {
+      <p class="profile-files">Selected: {{ selectedFileNames().join(', ') }}</p>
+    }
+    @if (isPreparingMerge()) {
+      <p class="profile-status" aria-live="polite">Preparing merged document…</p>
+    }
+    @if (uploadPreparationError()) {
+      <p class="profile-alert profile-alert--error" role="alert">{{ uploadPreparationError() }}</p>
+    }
+    @if (isUploading()) {
+      <p class="profile-status" aria-live="polite">Uploading files…</p>
+    }
+    @for (uploadError of uploadErrors(); track uploadError.fileName) {
+      <p class="profile-alert profile-alert--error" aria-live="polite">
+        {{ uploadError.fileName }}: {{ uploadError.message }}
+      </p>
+    }
+    @if (session(); as currentSession) {
+      <div class="profile-session" aria-live="polite">
+        <strong>Session status: {{ currentSession.status }}</strong>
+        <ul>
+          @for (file of currentSession.files; track file.id) {
+            <li>
+              <span>{{ file.id }} — {{ file.status }}</span>
+              @if (file.error) { <small>{{ file.error }}</small> }
+            </li>
+          }
+        </ul>
+      </div>
+    }
+  </section>
+
+  <form class="profile-form" [formGroup]="form" (ngSubmit)="save()">
+    <section class="profile-card">
+      <h2>Contact and summary</h2>
+      <div class="row g-3">
+        <label class="col-12 col-md-6">Name<input class="form-control" formControlName="name" /></label>
+        <label class="col-12 col-md-6">Email<input class="form-control" type="email" formControlName="email" /></label>
+        <label class="col-12 col-md-6">Phone<input class="form-control" formControlName="phone" /></label>
+        <label class="col-12 col-md-6">Location<input class="form-control" formControlName="location" /></label>
+        <label class="col-12 col-md-6">LinkedIn<input class="form-control" formControlName="linkedin" /></label>
+        <label class="col-12 col-md-6">Output language<input class="form-control" formControlName="output_language" /></label>
+        <label class="col-12">Summary<textarea class="form-control" rows="4" formControlName="summary"></textarea></label>
+      </div>
+    </section>
+
+    <section class="profile-card">
+      <h2>Experience and preferences</h2>
+      <div class="row g-3">
+        <label class="col-12 col-md-6">Soft skills<input class="form-control" formControlName="soft_skills" /></label>
+        <label class="col-12 col-md-6">Total years of experience<input class="form-control" formControlName="total_years_of_experience" /></label>
+        <label class="col-12 col-md-6">Preferred job titles<input class="form-control" formControlName="preferred_job_titles" /></label>
+        <label class="col-12 col-md-6">Preferred locations<input class="form-control" formControlName="preferred_locations" /></label>
+        <label class="col-12 col-md-6">Languages<input class="form-control" formControlName="languages" /></label>
+        <label class="col-12 col-md-6">Source<input class="form-control" formControlName="source" /></label>
+      </div>
+    </section>
+
+    <section class="profile-card">
+      <h2>Structured profile data</h2>
+      <p>Use valid JSON for these fields. Existing backend keys are preserved when you save.</p>
+      <div class="row g-3">
+        <label class="col-12 col-md-6">Certifications<textarea class="form-control profile-json" rows="8" formControlName="certifications"></textarea></label>
+        <label class="col-12 col-md-6">Work experiences<textarea class="form-control profile-json" rows="8" formControlName="work_experiences"></textarea></label>
+        <label class="col-12 col-md-6">Education<textarea class="form-control profile-json" rows="8" formControlName="education"></textarea></label>
+        <label class="col-12 col-md-6">Skills<textarea class="form-control profile-json" rows="8" formControlName="skills"></textarea></label>
+      </div>
+    </section>
+
+    <button class="btn btn-primary" type="submit" [disabled]="isSaving()">Save profile</button>
+  </form>
+}

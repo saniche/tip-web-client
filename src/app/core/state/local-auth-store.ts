@@ -77,10 +77,12 @@ export class LocalAuthStore extends signalStore(
 
 // --- LocalStorage helpers ---
 function saveToLocalStorage(state: LocalAuthState) {
+  if (typeof localStorage === 'undefined') return;
   localStorage.setItem('auth_state', JSON.stringify(state));
 }
 
 function loadFromLocalStorage(): LocalAuthState | null {
+  if (typeof localStorage === 'undefined') return null;
   const raw = localStorage.getItem('auth_state');
   if (!raw) return null;
   try {
@@ -91,5 +93,6 @@ function loadFromLocalStorage(): LocalAuthState | null {
 }
 
 function clearLocalStorage() {
+  if (typeof localStorage === 'undefined') return;
   localStorage.removeItem('auth_state');
 }

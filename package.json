@@ -19,6 +19,8 @@
     "@angular/router": "^22.1.0",
     "@ngrx/signals": "^22.0.1",
     "bootstrap": "^5.3.8",
+    "fflate": "^0.8.3",
+    "pdfjs-dist": "^6.4.299",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
