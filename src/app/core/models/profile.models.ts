@@ -29,7 +29,7 @@ export interface ProfileWorkExperience {
   StartDate?: string | null;
   EndDate?: string | null;
   Summary?: string | null;
-  RealisationDescription?: string | null;
+  RealisationDescription?: string[] | null;
 }
 
 export interface UserProfile {

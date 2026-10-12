@@ -1,8 +1,9 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { ProfileWorkExperience } from '../../../core/models/profile.models';
+import { StringListComponent } from '../string-list/string-list.component';
 
 @Component({
-  imports: [],
+  imports: [StringListComponent],
   selector: 'app-work-experiences-editor',
   templateUrl: './work-experiences.component.html',
 })
@@ -19,7 +20,7 @@ export class WorkExperiencesComponent {
         StartDate: null,
         EndDate: null,
         Summary: null,
-        RealisationDescription: null,
+        RealisationDescription: [],
       },
     ]);
   }
@@ -30,6 +31,10 @@ export class WorkExperiencesComponent {
     event: Event,
   ): void {
     this.updateExperience(index, { [field]: textValue(event) });
+  }
+
+  protected updateRealisationDescription(index: number, descriptions: string[]): void {
+    this.updateExperience(index, { RealisationDescription: descriptions });
   }
 
   protected removeExperience(index: number): void {

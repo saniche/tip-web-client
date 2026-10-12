@@ -27,10 +27,13 @@
         Summary
         <textarea class="form-control" rows="3" [value]="experience.Summary ?? ''" (input)="updateText($index, 'Summary', $event)"></textarea>
       </label>
-      <label class="col-12">
-        Realisation description
-        <textarea class="form-control" rows="3" [value]="experience.RealisationDescription ?? ''" (input)="updateText($index, 'RealisationDescription', $event)"></textarea>
-      </label>
+      <div class="col-12">
+        <app-string-list-editor
+          title="Realisation Description"
+          [items]="experience.RealisationDescription ?? []"
+          (itemsChange)="updateRealisationDescription($index, $event)"
+        />
+      </div>
       <div class="col-12">
         <button class="btn btn-outline-danger" type="button" (click)="removeExperience($index)">Remove</button>
       </div>

@@ -159,7 +159,7 @@ describe('Profile', () => {
     const sections = fixture.nativeElement.querySelectorAll(
       'app-skills-editor details, app-certificates-editor details, app-education-editor details, app-work-experiences-editor details, app-string-list-editor details',
     ) as NodeListOf<HTMLDetailsElement>;
-    expect(sections).toHaveLength(6);
+    expect(sections).toHaveLength(10);
     expect(Array.from(sections).every((section) => section.open)).toBe(true);
 
     for (const section of sections) {
@@ -183,19 +183,28 @@ describe('Profile', () => {
     });
     await createFixture();
 
-    const editors = fixture.nativeElement.querySelectorAll('app-string-list-editor');
-    expect(editors).toHaveLength(2);
-    const coreCompetencesAdd = editors[0].querySelector('button') as HTMLButtonElement;
-    const additionalInfoAdd = editors[1].querySelector('button') as HTMLButtonElement;
+    const coreCompetencesEditor = fixture.nativeElement.querySelector(
+      'app-string-list-editor[title="Core Competences"]',
+    ) as HTMLElement;
+    const additionalInformationsEditor = fixture.nativeElement.querySelector(
+      'app-string-list-editor[title="Additional Informations"]',
+    ) as HTMLElement;
+    const coreCompetencesAdd = coreCompetencesEditor.querySelector('button') as HTMLButtonElement;
+    const additionalInfoAdd = additionalInformationsEditor.querySelector(
+      'button',
+    ) as HTMLButtonElement;
     coreCompetencesAdd.click();
     additionalInfoAdd.click();
     fixture.detectChanges();
 
-    const inputs = fixture.nativeElement.querySelectorAll('app-string-list-editor input');
-    (inputs[0] as HTMLInputElement).value = 'Strategic planning';
-    inputs[0].dispatchEvent(new Event('input'));
-    (inputs[1] as HTMLInputElement).value = 'Volunteer mentor';
-    inputs[1].dispatchEvent(new Event('input'));
+    const coreCompetencesInput = coreCompetencesEditor.querySelector('input') as HTMLInputElement;
+    coreCompetencesInput.value = 'Strategic planning';
+    coreCompetencesInput.dispatchEvent(new Event('input'));
+    const additionalInformationsInput = additionalInformationsEditor.querySelector(
+      'input',
+    ) as HTMLInputElement;
+    additionalInformationsInput.value = 'Volunteer mentor';
+    additionalInformationsInput.dispatchEvent(new Event('input'));
     fixture.detectChanges();
 
     const form: HTMLFormElement = fixture.nativeElement.querySelector('.profile-form');
@@ -206,6 +215,58 @@ describe('Profile', () => {
       custom_field: 'preserve me',
       core_competences: ['Strategic planning'],
       additional_informations: ['Volunteer mentor'],
+    });
+  });
+
+  it('saves soft skills, job titles, locations, and languages as string lists', async () => {
+    store.profile.set({
+      id: 'profile-id',
+      user_id: 'user-id',
+      output_language: 'English',
+      data: {
+        custom_field: 'preserve me',
+        soft_skills: 'Communication',
+        preferred_job_titles: [],
+        preferred_locations: [],
+        languages: [],
+      },
+    });
+    await createFixture();
+
+    const listUpdates = [
+      { title: 'Soft skills', item: 'Mentoring' },
+      { title: 'Preferred job titles', item: 'Engineering manager' },
+      { title: 'Preferred locations', item: 'Montreal' },
+      { title: 'Languages', item: 'French' },
+    ];
+
+    for (const { title, item } of listUpdates) {
+      const editor = fixture.nativeElement.querySelector(
+        `app-string-list-editor[title="${title}"]`,
+      ) as HTMLElement;
+      if (title === 'Soft skills') {
+        expect((editor.querySelector('input') as HTMLInputElement).value).toBe('Communication');
+      }
+      (editor.querySelector('button:not([aria-label])') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      const inputs = editor.querySelectorAll('input');
+      const newItem = inputs[inputs.length - 1] as HTMLInputElement;
+      newItem.value = item;
+      newItem.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+    }
+
+    const form: HTMLFormElement = fixture.nativeElement.querySelector('.profile-form');
+    form.dispatchEvent(new Event('submit'));
+
+    const [data] = store.saveProfile.mock.calls[0];
+    expect(data).toMatchObject({
+      custom_field: 'preserve me',
+      soft_skills: ['Communication', 'Mentoring'],
+      preferred_job_titles: ['Engineering manager'],
+      preferred_locations: ['Montreal'],
+      languages: ['French'],
     });
   });
 

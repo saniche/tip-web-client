@@ -61,11 +61,7 @@ export class ProfileComponent implements OnInit {
     location: [''],
     linkedin: [''],
     summary: [''],
-    soft_skills: [''],
     total_years_of_experience: [''],
-    preferred_job_titles: [''],
-    preferred_locations: [''],
-    languages: [''],
     source: [''],
     output_language: ['English', [Validators.required]],
   });
@@ -83,11 +79,7 @@ export class ProfileComponent implements OnInit {
           location: stringValue(data['location']),
           linkedin: stringValue(data['linkedin']),
           summary: stringValue(data['summary']),
-          soft_skills: stringValue(data['soft_skills']),
           total_years_of_experience: stringValue(data['total_years_of_experience']),
-          preferred_job_titles: stringValue(data['preferred_job_titles']),
-          preferred_locations: stringValue(data['preferred_locations']),
-          languages: stringValue(data['languages']),
           source: stringValue(data['source']),
           output_language: profile.output_language || 'English',
         });
@@ -147,11 +139,7 @@ export class ProfileComponent implements OnInit {
       location: values.location,
       linkedin: values.linkedin,
       summary: values.summary,
-      soft_skills: values.soft_skills,
       total_years_of_experience: values.total_years_of_experience,
-      preferred_job_titles: values.preferred_job_titles,
-      preferred_locations: values.preferred_locations,
-      languages: values.languages,
       source: values.source,
     };
 
@@ -180,6 +168,32 @@ export class ProfileComponent implements OnInit {
 
   protected additionalInformations(): string[] {
     return this.sectionItems<string>('additional_informations');
+  }
+
+  protected softSkills(): string[] {
+    return this.stringListItems('soft_skills');
+  }
+
+  protected preferredJobTitles(): string[] {
+    return this.stringListItems('preferred_job_titles');
+  }
+
+  protected preferredLocations(): string[] {
+    return this.stringListItems('preferred_locations');
+  }
+
+  protected languages(): string[] {
+    return this.stringListItems('languages');
+  }
+
+  protected hasUnsupportedStringListData(key: string): boolean {
+    const value = this.masterProfileData()[key];
+    return (
+      value !== null &&
+      value !== undefined &&
+      typeof value !== 'string' &&
+      (!Array.isArray(value) || value.some((item) => typeof item !== 'string'))
+    );
   }
 
   protected hasNonListSectionData(key: string): boolean {
@@ -211,9 +225,33 @@ export class ProfileComponent implements OnInit {
     this.updateSection('additional_informations', items);
   }
 
+  protected updateSoftSkills(items: string[]): void {
+    this.updateSection('soft_skills', items);
+  }
+
+  protected updatePreferredJobTitles(items: string[]): void {
+    this.updateSection('preferred_job_titles', items);
+  }
+
+  protected updatePreferredLocations(items: string[]): void {
+    this.updateSection('preferred_locations', items);
+  }
+
+  protected updateLanguages(items: string[]): void {
+    this.updateSection('languages', items);
+  }
+
   private sectionItems<T>(key: string): T[] {
     const value = this.masterProfileData()[key];
     return Array.isArray(value) ? (value as T[]) : [];
+  }
+
+  private stringListItems(key: string): string[] {
+    const value = this.masterProfileData()[key];
+    if (Array.isArray(value)) {
+      return value.filter((item): item is string => typeof item === 'string');
+    }
+    return typeof value === 'string' ? [value] : [];
   }
 
   private updateSection(key: string, value: unknown[]): void {

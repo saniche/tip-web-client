@@ -97,11 +97,31 @@
     <section class="profile-card">
       <h2>Experience and preferences</h2>
       <div class="row g-3">
-        <label class="col-12 col-md-6">Soft skills<input class="form-control" formControlName="soft_skills" /></label>
+        <div class="col-12 col-md-6">
+          @if (hasUnsupportedStringListData('soft_skills')) {
+            <p class="profile-alert profile-alert--notice">Saved soft skills data contains unsupported values and remains unchanged unless you edit the list.</p>
+          }
+          <app-string-list-editor title="Soft skills" [items]="softSkills()" (itemsChange)="updateSoftSkills($event)" />
+        </div>
         <label class="col-12 col-md-6">Total years of experience<input class="form-control" formControlName="total_years_of_experience" /></label>
-        <label class="col-12 col-md-6">Preferred job titles<input class="form-control" formControlName="preferred_job_titles" /></label>
-        <label class="col-12 col-md-6">Preferred locations<input class="form-control" formControlName="preferred_locations" /></label>
-        <label class="col-12 col-md-6">Languages<input class="form-control" formControlName="languages" /></label>
+        <div class="col-12 col-md-6">
+          @if (hasUnsupportedStringListData('preferred_job_titles')) {
+            <p class="profile-alert profile-alert--notice">Saved preferred job titles data contains unsupported values and remains unchanged unless you edit the list.</p>
+          }
+          <app-string-list-editor title="Preferred job titles" [items]="preferredJobTitles()" (itemsChange)="updatePreferredJobTitles($event)" />
+        </div>
+        <div class="col-12 col-md-6">
+          @if (hasUnsupportedStringListData('preferred_locations')) {
+            <p class="profile-alert profile-alert--notice">Saved preferred locations data contains unsupported values and remains unchanged unless you edit the list.</p>
+          }
+          <app-string-list-editor title="Preferred locations" [items]="preferredLocations()" (itemsChange)="updatePreferredLocations($event)" />
+        </div>
+        <div class="col-12 col-md-6">
+          @if (hasUnsupportedStringListData('languages')) {
+            <p class="profile-alert profile-alert--notice">Saved languages data contains unsupported values and remains unchanged unless you edit the list.</p>
+          }
+          <app-string-list-editor title="Languages" [items]="languages()" (itemsChange)="updateLanguages($event)" />
+        </div>
         <label class="col-12 col-md-6">Source<input class="form-control" formControlName="source" /></label>
       </div>
     </section>
