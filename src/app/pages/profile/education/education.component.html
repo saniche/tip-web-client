@@ -1,0 +1,45 @@
+<details class="card p-3 mb-3" open>
+  <summary class="mb-3">
+    <h2 id="education-heading" class="h5 d-inline mb-0">Education</h2>
+  </summary>
+  <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+    <button class="btn btn-outline-primary btn-sm" type="button" (click)="addEducation()">Add education</button>
+  </div>
+  @for (entry of education; track $index) {
+    <div class="row g-3 align-items-end mb-3">
+      <label class="col-12 col-md-4">
+        Institution
+        <input class="form-control" [value]="entry.Institution ?? ''" (input)="updateText($index, 'Institution', $event)" />
+      </label>
+      <label class="col-12 col-md-4">
+        Location
+        <input class="form-control" [value]="entry.Location ?? ''" (input)="updateText($index, 'Location', $event)" />
+      </label>
+      <label class="col-12 col-md-4">
+        Degree
+        <input class="form-control" [value]="entry.Degree ?? ''" (input)="updateText($index, 'Degree', $event)" />
+      </label>
+      <label class="col-12 col-md-4">
+        Field
+        <input class="form-control" [value]="entry.Field ?? ''" (input)="updateText($index, 'Field', $event)" />
+      </label>
+      <label class="col-8 col-md-3">
+        Year
+        <input class="form-control" type="number" step="1" [value]="entry.Year ?? ''" (input)="updateYear($index, $event)" />
+      </label>
+      <label class="col-8 col-md-3">
+        Completed
+        <select class="form-select" [value]="entry.Completed === true ? 'true' : entry.Completed === false ? 'false' : ''" (change)="updateCompleted($index, $event)">
+          <option value="">Not specified</option>
+          <option value="true">Yes</option>
+          <option value="false">No</option>
+        </select>
+      </label>
+      <div class="col-4 col-md-2">
+        <button class="btn btn-outline-danger w-100" type="button" (click)="removeEducation($index)">Remove</button>
+      </div>
+    </div>
+  } @empty {
+    <p class="text-body-secondary mb-0">No education added.</p>
+  }
+</details>

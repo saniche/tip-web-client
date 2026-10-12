@@ -3,7 +3,7 @@ import { Auth } from './pages/auth/auth';
 import { Register } from './pages/auth/register/register';
 import { Dashboard } from './pages/dashboard/dashboard';
 import { Jobs } from './pages/jobs/jobs';
-import { Profile } from './pages/profile/profile';
+import { ProfileComponent } from './pages/profile/profile.component';
 
 export const routes: Routes = [
   {
@@ -29,7 +29,7 @@ export const routes: Routes = [
   },
   {
     path: 'profile',
-    component: Profile,
+    component: ProfileComponent,
   },
   {
     path: '**',

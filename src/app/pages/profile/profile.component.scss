@@ -96,7 +96,6 @@
   gap: 1.25rem;
 }
 
-.profile-json {
-  font-family: var(--bs-font-monospace);
-  font-size: 0.9rem;
+:host {
+  display: block;
 }

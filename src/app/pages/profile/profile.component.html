@@ -18,9 +18,9 @@
     </div>
   </section>
 
-  @if (error() || errorMessage()) {
+  @if (error()) {
     <section class="profile-alert profile-alert--error" aria-live="polite">
-      {{ errorMessage() || error() }}
+      {{ error() }}
     </section>
   }
   @if (saveMessage()) {
@@ -106,15 +106,30 @@
       </div>
     </section>
 
-    <section class="profile-card">
-      <h2>Structured profile data</h2>
-      <p>Use valid JSON for these fields. Existing backend keys are preserved when you save.</p>
-      <div class="row g-3">
-        <label class="col-12 col-md-6">Certifications<textarea class="form-control profile-json" rows="8" formControlName="certifications"></textarea></label>
-        <label class="col-12 col-md-6">Work experiences<textarea class="form-control profile-json" rows="8" formControlName="work_experiences"></textarea></label>
-        <label class="col-12 col-md-6">Education<textarea class="form-control profile-json" rows="8" formControlName="education"></textarea></label>
-        <label class="col-12 col-md-6">Skills<textarea class="form-control profile-json" rows="8" formControlName="skills"></textarea></label>
-      </div>
+    <section class="profile-card" aria-labelledby="structured-profile-heading">
+      <h2 id="structured-profile-heading">Structured profile data</h2>
+      <p>Edit each list using its controls. Existing profile keys are preserved when you save.</p>
+      
+      @if (hasNonListSectionData('work_experiences')) {
+      <p class="profile-alert profile-alert--notice">Saved work experience data is not a list. It remains unchanged unless you
+        edit the Work experiences section.</p>
+      }
+      <app-work-experiences-editor [workExperiences]="workExperiences()" (workExperiencesChange)="updateWorkExperiences($event)" />
+      
+      @if (hasNonListSectionData('skills')) {
+        <p class="profile-alert profile-alert--notice">Saved skills data is not a list. It remains unchanged unless you edit the Skills section.</p>
+      }
+      <app-skills-editor [skills]="skills()" (skillsChange)="updateSkills($event)" />
+      
+      @if (hasNonListSectionData('certifications')) {
+        <p class="profile-alert profile-alert--notice">Saved certificate data is not a list. It remains unchanged unless you edit the Certificates section.</p>
+      }
+      <app-certificates-editor [certificates]="certificates()" (certificatesChange)="updateCertificates($event)" />
+      @if (hasNonListSectionData('education')) {
+        <p class="profile-alert profile-alert--notice">Saved education data is not a list. It remains unchanged unless you edit the Education section.</p>
+      }
+      <app-education-editor [education]="education()" (educationChange)="updateEducation($event)" />
+     
     </section>
 
     <button class="btn btn-primary" type="submit" [disabled]="isSaving()">Save profile</button>

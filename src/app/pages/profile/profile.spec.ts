@@ -5,10 +5,10 @@ import { signal } from '@angular/core';
 import { describe, expect, it, vi } from 'vitest';
 import { AuthStore } from '../../core/state/auth-store';
 import { ProfileStore } from '../../core/state/profile-store';
-import { Profile } from './profile';
+import { ProfileComponent } from './profile.component';
 
 describe('Profile', () => {
-  let fixture: ComponentFixture<Profile>;
+  let fixture: ComponentFixture<ProfileComponent>;
   let store: {
     profile: ReturnType<typeof signal>;
     session: ReturnType<typeof signal>;
@@ -45,7 +45,7 @@ describe('Profile', () => {
 
   async function createFixture(): Promise<void> {
     await TestBed.configureTestingModule({
-      imports: [Profile],
+      imports: [ProfileComponent],
       providers: [
         provideHttpClient(),
         provideRouter([]),
@@ -54,7 +54,7 @@ describe('Profile', () => {
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(Profile);
+    fixture = TestBed.createComponent(ProfileComponent);
     fixture.detectChanges();
   }
 
@@ -106,6 +106,68 @@ describe('Profile', () => {
     expect(store.uploadFiles).not.toHaveBeenCalled();
     expect(fixture.nativeElement.textContent).toContain('No readable text was found in "empty.md"');
     expect(fixture.nativeElement.textContent).toContain('Disable merge mode');
+  });
+
+  it('merges edited sections into the master profile and preserves other data when saving', async () => {
+    store.profile.set({
+      id: 'profile-id',
+      user_id: 'user-id',
+      output_language: 'English',
+      data: {
+        name: 'Ada',
+        custom_field: 'preserve me',
+        skills: [],
+        certifications: [],
+        education: [],
+        work_experiences: [],
+      },
+    });
+    await createFixture();
+
+    const addSkill: HTMLButtonElement = fixture.nativeElement.querySelector(
+      'app-skills-editor button',
+    );
+    addSkill.click();
+    fixture.detectChanges();
+
+    const skillName: HTMLInputElement = fixture.nativeElement.querySelector(
+      'app-skills-editor input',
+    );
+    skillName.value = 'TypeScript';
+    skillName.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    const form: HTMLFormElement = fixture.nativeElement.querySelector('.profile-form');
+    form.dispatchEvent(new Event('submit'));
+    expect(store.saveProfile).toHaveBeenCalledOnce();
+
+    const [data, outputLanguage] = store.saveProfile.mock.calls[0];
+    expect(data).toMatchObject({
+      name: 'Ada',
+      custom_field: 'preserve me',
+      skills: [{ name: 'TypeScript', level: null }],
+      certifications: [],
+      education: [],
+      work_experiences: [],
+    });
+    expect(outputLanguage).toBe('English');
+  });
+
+  it('makes every structured profile section collapsible', async () => {
+    await createFixture();
+
+    const sections = fixture.nativeElement.querySelectorAll(
+      'app-skills-editor details, app-certificates-editor details, app-education-editor details, app-work-experiences-editor details',
+    ) as NodeListOf<HTMLDetailsElement>;
+    expect(sections).toHaveLength(4);
+    expect(Array.from(sections).every((section) => section.open)).toBe(true);
+
+    for (const section of sections) {
+      (section.querySelector('summary') as HTMLElement).click();
+    }
+    fixture.detectChanges();
+
+    expect(Array.from(sections).every((section) => !section.open)).toBe(true);
   });
 
   function selectFiles(files: File[]): void {

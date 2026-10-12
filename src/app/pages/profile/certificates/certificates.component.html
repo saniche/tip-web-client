@@ -1,0 +1,29 @@
+<details class="card p-3 mb-3" open>
+  <summary class="mb-3">
+    <h2 id="certificates-heading" class="h5 d-inline mb-0">Certificates</h2>
+  </summary>
+  <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+    <button class="btn btn-outline-primary btn-sm" type="button" (click)="addCertificate()">Add certificate</button>
+  </div>
+  @for (certificate of certificates; track $index) {
+    <div class="row g-3 align-items-end mb-3">
+      <label class="col-12 col-md-4">
+        Name
+        <input class="form-control" [value]="certificate.Name ?? ''" (input)="updateName($index, $event)" />
+      </label>
+      <label class="col-12 col-md-4">
+        Issuer
+        <input class="form-control" [value]="certificate.Issuer ?? ''" (input)="updateIssuer($index, $event)" />
+      </label>
+      <label class="col-8 col-md-2">
+        Year
+        <input class="form-control" type="number" step="1" [value]="certificate.Year ?? ''" (input)="updateYear($index, $event)" />
+      </label>
+      <div class="col-4 col-md-2">
+        <button class="btn btn-outline-danger w-100" type="button" (click)="removeCertificate($index)">Remove</button>
+      </div>
+    </div>
+  } @empty {
+    <p class="text-body-secondary mb-0">No certificates added.</p>
+  }
+</details>

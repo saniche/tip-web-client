@@ -1,19 +1,35 @@
 import { Component, DestroyRef, effect, inject, OnInit, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import {
+  ProfileCertificate,
+  ProfileData,
+  ProfileEducation,
+  ProfileSkill,
+  ProfileWorkExperience,
+} from '../../core/models/profile.models';
 import { AuthStore } from '../../core/state/auth-store';
 import { ProfileStore } from '../../core/state/profile-store';
 import { mergeProfileFiles } from '../../core/utils/profile-file-merge';
-
-const JSON_FIELDS = ['certifications', 'work_experiences', 'education', 'skills'];
+import { CertificatesComponent } from './certificates/certificates.component';
+import { EducationComponent } from './education/education.component';
+import { SkillsComponent } from './skills/skills.component';
+import { WorkExperiencesComponent } from './work-experiences/work-experiences.component';
 
 @Component({
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [
+    CertificatesComponent,
+    EducationComponent,
+    ReactiveFormsModule,
+    RouterLink,
+    SkillsComponent,
+    WorkExperiencesComponent,
+  ],
   selector: 'app-profile',
-  styleUrl: './profile.scss',
-  templateUrl: './profile.html',
+  styleUrl: './profile.component.scss',
+  templateUrl: './profile.component.html',
 })
-export class Profile implements OnInit {
+export class ProfileComponent implements OnInit {
   private readonly formBuilder = inject(NonNullableFormBuilder);
   private readonly profileStore = inject(ProfileStore);
   private readonly authStore = inject(AuthStore);
@@ -22,6 +38,7 @@ export class Profile implements OnInit {
   protected readonly auth = this.authStore.authSession;
   protected readonly isAuthenticated = this.authStore.isAuthenticated;
   protected readonly profile = this.profileStore.profile;
+  protected readonly masterProfileData = signal<ProfileData>({});
   protected readonly session = this.profileStore.session;
   protected readonly isLoading = this.profileStore.isLoading;
   protected readonly isSaving = this.profileStore.isSaving;
@@ -48,10 +65,6 @@ export class Profile implements OnInit {
     preferred_locations: [''],
     languages: [''],
     source: [''],
-    certifications: ['{}'],
-    work_experiences: ['{}'],
-    education: ['{}'],
-    skills: ['{}'],
     output_language: ['English', [Validators.required]],
   });
 
@@ -60,6 +73,7 @@ export class Profile implements OnInit {
       const profile = this.profile();
       if (profile) {
         const data = profile.data;
+        this.masterProfileData.set({ ...data });
         this.form.patchValue({
           name: stringValue(data['name']),
           email: stringValue(data['email']),
@@ -73,10 +87,6 @@ export class Profile implements OnInit {
           preferred_locations: stringValue(data['preferred_locations']),
           languages: stringValue(data['languages']),
           source: stringValue(data['source']),
-          certifications: jsonValue(data['certifications']),
-          work_experiences: jsonValue(data['work_experiences']),
-          education: jsonValue(data['education']),
-          skills: jsonValue(data['skills']),
           output_language: profile.output_language || 'English',
         });
       }
@@ -127,7 +137,8 @@ export class Profile implements OnInit {
     }
 
     const values = this.form.getRawValue();
-    const data = {
+    const data: ProfileData = {
+      ...this.masterProfileData(),
       name: values.name,
       email: values.email,
       phone: values.phone,
@@ -140,22 +151,56 @@ export class Profile implements OnInit {
       preferred_locations: values.preferred_locations,
       languages: values.languages,
       source: values.source,
-    } as Record<string, unknown>;
+    };
 
-    for (const field of JSON_FIELDS) {
-      try {
-        data[field] = JSON.parse(values[field as keyof typeof values]);
-      } catch {
-        this.errorMessage.set(`The ${field.replaceAll('_', ' ')} field must contain valid JSON.`);
-        return;
-      }
-    }
-
-    this.errorMessage.set(null);
     this.profileStore.saveProfile(data, values.output_language);
   }
 
-  protected readonly errorMessage = signal<string | null>(null);
+  protected skills(): ProfileSkill[] {
+    return this.sectionItems<ProfileSkill>('skills');
+  }
+
+  protected certificates(): ProfileCertificate[] {
+    return this.sectionItems<ProfileCertificate>('certifications');
+  }
+
+  protected education(): ProfileEducation[] {
+    return this.sectionItems<ProfileEducation>('education');
+  }
+
+  protected workExperiences(): ProfileWorkExperience[] {
+    return this.sectionItems<ProfileWorkExperience>('work_experiences');
+  }
+
+  protected hasNonListSectionData(key: string): boolean {
+    const value = this.masterProfileData()[key];
+    return value !== null && value !== undefined && !Array.isArray(value);
+  }
+
+  protected updateSkills(skills: unknown[]): void {
+    this.updateSection('skills', skills);
+  }
+
+  protected updateCertificates(certificates: unknown[]): void {
+    this.updateSection('certifications', certificates);
+  }
+
+  protected updateEducation(education: unknown[]): void {
+    this.updateSection('education', education);
+  }
+
+  protected updateWorkExperiences(experiences: unknown[]): void {
+    this.updateSection('work_experiences', experiences);
+  }
+
+  private sectionItems<T>(key: string): T[] {
+    const value = this.masterProfileData()[key];
+    return Array.isArray(value) ? (value as T[]) : [];
+  }
+
+  private updateSection(key: string, value: unknown[]): void {
+    this.masterProfileData.update((data) => ({ ...data, [key]: value }));
+  }
 }
 
 function stringValue(value: unknown): string {
@@ -163,10 +208,6 @@ function stringValue(value: unknown): string {
     return '';
   }
   return typeof value === 'string' ? value : JSON.stringify(value);
-}
-
-function jsonValue(value: unknown): string {
-  return value === undefined || value === null ? '{}' : JSON.stringify(value, null, 2);
 }
 
 function errorMessage(error: unknown): string {
