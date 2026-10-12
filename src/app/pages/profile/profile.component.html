@@ -109,7 +109,22 @@
     <section class="profile-card" aria-labelledby="structured-profile-heading">
       <h2 id="structured-profile-heading">Structured profile data</h2>
       <p>Edit each list using its controls. Existing profile keys are preserved when you save.</p>
-      
+      @if (hasNonListSectionData('core_competences')) {
+        <p class="profile-alert profile-alert--notice">Saved core competences data is not a list. It remains unchanged unless you edit the Core Competences section.</p>
+      }
+      <app-string-list-editor
+        title="Core Competences"
+        [items]="coreCompetences()"
+        (itemsChange)="updateCoreCompetences($event)"
+      />
+      @if (hasNonListSectionData('additional_informations')) {
+        <p class="profile-alert profile-alert--notice">Saved additional informations data is not a list. It remains unchanged unless you edit the Additional Informations section.</p>
+      }
+      <app-string-list-editor
+        title="Additional Informations"
+        [items]="additionalInformations()"
+        (itemsChange)="updateAdditionalInformations($event)"
+      />
       @if (hasNonListSectionData('work_experiences')) {
       <p class="profile-alert profile-alert--notice">Saved work experience data is not a list. It remains unchanged unless you
         edit the Work experiences section.</p>

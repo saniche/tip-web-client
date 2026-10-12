@@ -1,0 +1,31 @@
+<details class="card p-3 mb-3" open>
+  <summary class="mb-3">
+    <h3 class="h5 d-inline mb-0">{{ title }}</h3>
+  </summary>
+  <ul class="mb-3">
+    @for (item of items; track $index) {
+      <li class="mb-2">
+        <div class="d-flex align-items-center gap-2">
+          <input
+            class="form-control"
+            type="text"
+            [attr.aria-label]="title + ' item ' + ($index + 1)"
+            [value]="item"
+            (input)="updateItem($index, $event)"
+          />
+          <button
+            class="btn btn-outline-danger"
+            type="button"
+            [attr.aria-label]="'Remove ' + title + ' item ' + ($index + 1)"
+            (click)="removeItem($index)"
+          >
+            Remove
+          </button>
+        </div>
+      </li>
+    } @empty {
+      <li class="text-body-secondary">No items added.</li>
+    }
+  </ul>
+  <button class="btn btn-outline-primary btn-sm" type="button" (click)="addItem()">Add item</button>
+</details>

@@ -157,9 +157,9 @@ describe('Profile', () => {
     await createFixture();
 
     const sections = fixture.nativeElement.querySelectorAll(
-      'app-skills-editor details, app-certificates-editor details, app-education-editor details, app-work-experiences-editor details',
+      'app-skills-editor details, app-certificates-editor details, app-education-editor details, app-work-experiences-editor details, app-string-list-editor details',
     ) as NodeListOf<HTMLDetailsElement>;
-    expect(sections).toHaveLength(4);
+    expect(sections).toHaveLength(6);
     expect(Array.from(sections).every((section) => section.open)).toBe(true);
 
     for (const section of sections) {
@@ -168,6 +168,45 @@ describe('Profile', () => {
     fixture.detectChanges();
 
     expect(Array.from(sections).every((section) => !section.open)).toBe(true);
+  });
+
+  it('saves edits to core competences and additional informations lists', async () => {
+    store.profile.set({
+      id: 'profile-id',
+      user_id: 'user-id',
+      output_language: 'English',
+      data: {
+        custom_field: 'preserve me',
+        core_competences: [],
+        additional_informations: [],
+      },
+    });
+    await createFixture();
+
+    const editors = fixture.nativeElement.querySelectorAll('app-string-list-editor');
+    expect(editors).toHaveLength(2);
+    const coreCompetencesAdd = editors[0].querySelector('button') as HTMLButtonElement;
+    const additionalInfoAdd = editors[1].querySelector('button') as HTMLButtonElement;
+    coreCompetencesAdd.click();
+    additionalInfoAdd.click();
+    fixture.detectChanges();
+
+    const inputs = fixture.nativeElement.querySelectorAll('app-string-list-editor input');
+    (inputs[0] as HTMLInputElement).value = 'Strategic planning';
+    inputs[0].dispatchEvent(new Event('input'));
+    (inputs[1] as HTMLInputElement).value = 'Volunteer mentor';
+    inputs[1].dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    const form: HTMLFormElement = fixture.nativeElement.querySelector('.profile-form');
+    form.dispatchEvent(new Event('submit'));
+
+    const [data] = store.saveProfile.mock.calls[0];
+    expect(data).toMatchObject({
+      custom_field: 'preserve me',
+      core_competences: ['Strategic planning'],
+      additional_informations: ['Volunteer mentor'],
+    });
   });
 
   function selectFiles(files: File[]): void {

@@ -14,6 +14,7 @@ import { mergeProfileFiles } from '../../core/utils/profile-file-merge';
 import { CertificatesComponent } from './certificates/certificates.component';
 import { EducationComponent } from './education/education.component';
 import { SkillsComponent } from './skills/skills.component';
+import { StringListComponent } from './string-list/string-list.component';
 import { WorkExperiencesComponent } from './work-experiences/work-experiences.component';
 
 @Component({
@@ -23,6 +24,7 @@ import { WorkExperiencesComponent } from './work-experiences/work-experiences.co
     ReactiveFormsModule,
     RouterLink,
     SkillsComponent,
+    StringListComponent,
     WorkExperiencesComponent,
   ],
   selector: 'app-profile',
@@ -172,6 +174,14 @@ export class ProfileComponent implements OnInit {
     return this.sectionItems<ProfileWorkExperience>('work_experiences');
   }
 
+  protected coreCompetences(): string[] {
+    return this.sectionItems<string>('core_competences');
+  }
+
+  protected additionalInformations(): string[] {
+    return this.sectionItems<string>('additional_informations');
+  }
+
   protected hasNonListSectionData(key: string): boolean {
     const value = this.masterProfileData()[key];
     return value !== null && value !== undefined && !Array.isArray(value);
@@ -191,6 +201,14 @@ export class ProfileComponent implements OnInit {
 
   protected updateWorkExperiences(experiences: unknown[]): void {
     this.updateSection('work_experiences', experiences);
+  }
+
+  protected updateCoreCompetences(items: string[]): void {
+    this.updateSection('core_competences', items);
+  }
+
+  protected updateAdditionalInformations(items: string[]): void {
+    this.updateSection('additional_informations', items);
   }
 
   private sectionItems<T>(key: string): T[] {
