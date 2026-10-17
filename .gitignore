@@ -39,6 +39,11 @@ testem.log
 /typings
 __screenshots__/
 
+# Additional Node outputs and local environment files
+build/
+*.log
+.env*
+
 # System files
 .DS_Store
 Thumbs.db

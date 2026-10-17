@@ -1,0 +1,181 @@
+<section class="normalized-jobs">
+  <header class="normalized-jobs__header">
+    <p class="normalized-jobs__kicker">Job discovery</p>
+    <h1>Normalized jobs</h1>
+    <p>Browse the latest job opportunities and their key details.</p>
+  </header>
+
+  <form
+    class="normalized-jobs__filters row g-3"
+    aria-label="Filter normalized jobs"
+    (submit)="applyFilters($event)"
+  >
+    <div class="col-12 col-md-6 col-xl-3">
+      <label class="form-label" for="job-title-filter">Title</label>
+      <input
+        class="form-control"
+        id="job-title-filter"
+        name="title"
+        type="search"
+        [value]="draftFilters().title ?? ''"
+        (input)="updateDraftFilter('title', $event)"
+      />
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <label class="form-label" for="job-company-filter">Company</label>
+      <input
+        class="form-control"
+        id="job-company-filter"
+        name="company"
+        type="search"
+        [value]="draftFilters().company ?? ''"
+        (input)="updateDraftFilter('company', $event)"
+      />
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <label class="form-label" for="job-location-filter">Location</label>
+      <input
+        class="form-control"
+        id="job-location-filter"
+        name="location"
+        type="search"
+        [value]="draftFilters().location ?? ''"
+        (input)="updateDraftFilter('location', $event)"
+      />
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <label class="form-label" for="job-source-filter">Source</label>
+      <input
+        class="form-control"
+        id="job-source-filter"
+        name="source"
+        type="search"
+        [value]="draftFilters().source ?? ''"
+        (input)="updateDraftFilter('source', $event)"
+      />
+    </div>
+    <div class="col-12 d-flex flex-wrap gap-2">
+      <button class="btn btn-primary" type="submit">Apply filters</button>
+      <button class="btn btn-outline-secondary" type="button" (click)="clearFilters()">
+        Clear filters
+      </button>
+    </div>
+  </form>
+
+  <section class="normalized-jobs__pagination" aria-label="Pagination">
+    <div class="normalized-jobs__pagination-fields">
+      <div>
+        <label class="form-label" for="job-page-size">Results per page</label>
+        <input
+          class="form-control"
+          id="job-page-size"
+          type="number"
+          min="1"
+          step="1"
+          [value]="draftLimit()"
+          (input)="updateDraftPagination('limit', $event)"
+        />
+      </div>
+      <div>
+        <label class="form-label" for="job-page-number">Page</label>
+        <input
+          class="form-control"
+          id="job-page-number"
+          type="number"
+          min="1"
+          step="1"
+          [value]="draftPage()"
+          (input)="updateDraftPagination('page', $event)"
+        />
+      </div>
+      <button class="btn btn-outline-primary" type="button" (click)="applyPagination()">
+        Go to page
+      </button>
+    </div>
+    <div class="normalized-jobs__pagination-navigation">
+      @if (page(); as currentPageResult) {
+        <span
+          >Page {{ currentPage() }} of {{ totalPages() }} ·
+          {{ currentPageResult.total }} results</span
+        >
+      } @else {
+        <span>Page {{ currentPage() }}</span>
+      }
+      <div class="d-flex gap-2">
+        <button
+          class="btn btn-outline-secondary"
+          type="button"
+          [disabled]="state() !== 'results' || currentPage() <= 1"
+          (click)="previousPage()"
+        >
+          Previous
+        </button>
+        <button
+          class="btn btn-outline-secondary"
+          type="button"
+          [disabled]="state() !== 'results' || currentPage() >= totalPages()"
+          (click)="nextPage()"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  </section>
+
+  @if (state() === 'loading') {
+    <p class="normalized-jobs__status" role="status">Loading normalized jobs…</p>
+  } @else if (state() === 'error') {
+    <div class="normalized-jobs__message" role="alert">
+      <p>{{ errorMessage() }}</p>
+      @if (isValidationError()) {
+        <button class="btn btn-primary" type="button" (click)="resetPagination()">
+          Reset pagination
+        </button>
+      } @else {
+        <button class="btn btn-primary" type="button" (click)="retry()">Retry</button>
+      }
+    </div>
+  } @else if (state() === 'empty') {
+    <div class="normalized-jobs__message" role="status">
+      @if (isOutOfRange()) {
+        <p>This page is outside the available results.</p>
+        <button class="btn btn-primary" type="button" (click)="goToLastPage()">
+          Go to the last available page
+        </button>
+      } @else {
+        <p>No normalized jobs match the current filters.</p>
+      }
+    </div>
+  } @else if (page(); as currentPage) {
+    <div class="normalized-jobs__summary" aria-live="polite">
+      {{ currentPage.total }} {{ currentPage.total === 1 ? 'job' : 'jobs' }}
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <caption class="visually-hidden">
+          Normalized job listings
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Title</th>
+            <th scope="col">Company</th>
+            <th scope="col">Location</th>
+            <th scope="col">Posting date</th>
+            <th scope="col">Source</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (job of jobs(); track job.id) {
+            <tr>
+              <td><a href="/details/{{ job.id }}">{{ displayValue(job.title) }}</a></td>
+              <td>{{ displayValue(job.company) }}</td>
+              <td>{{ displayValue(job.location) }}</td>
+              <td>{{ displayValue(job.postingDate) }}</td>
+              <td>{{ displayValue(job.source) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

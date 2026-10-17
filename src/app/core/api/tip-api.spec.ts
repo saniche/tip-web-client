@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { NormalizedJobsPage } from '../models/normalized-job';
 import { TipApi } from './tip-api';
 import { environment } from '../../../environments/environment';
 
@@ -18,6 +19,54 @@ describe('TipApi', () => {
 
   it('should be created', () => {
     expect(service).toBeTruthy();
+  });
+
+  it('lists normalized jobs with filters and maps the paginated response', () => {
+    const job = {
+      id: 'job-1',
+      title: 'Senior Engineer',
+      company: 'Northwind',
+      location: 'Remote',
+      postingDate: '2026-10-13',
+      source: 'Acme',
+    };
+    let result: NormalizedJobsPage | undefined;
+
+    service
+      .listNormalizedJobs({
+        title: ' Engineer ',
+        company: '  ',
+        source: ' Acme ',
+        page: 2,
+        limit: 10,
+      })
+      .subscribe((page) => {
+        result = page;
+      });
+
+    const request = http.expectOne(
+      (candidate) => candidate.url === `${environment.baseUrl}/jobs/normalized`,
+    );
+    expect(request.request.method).toBe('GET');
+    expect(request.request.params.get('title')).toBe('Engineer');
+    expect(request.request.params.has('company')).toBe(false);
+    expect(request.request.params.get('source')).toBe('Acme');
+    expect(request.request.params.get('page')).toBe('2');
+    expect(request.request.params.get('limit')).toBe('10');
+    request.flush({ items: [job], limit: 10, total: 11, page: 2 });
+
+    expect(result).toEqual({ items: [job], limit: 10, total: 11, page: 2 });
+  });
+
+  it('uses the default first page and page size for normalized jobs', () => {
+    service.listNormalizedJobs().subscribe();
+
+    const request = http.expectOne(
+      (candidate) => candidate.url === `${environment.baseUrl}/jobs/normalized`,
+    );
+    expect(request.request.params.get('page')).toBe('1');
+    expect(request.request.params.get('limit')).toBe('20');
+    request.flush({ items: [], limit: 20, total: 0, page: 1 });
   });
 
   it('updates a profile with data and output language', () => {
