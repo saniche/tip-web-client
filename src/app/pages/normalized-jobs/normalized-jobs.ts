@@ -1,6 +1,6 @@
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, ParamMap, Params, Router } from '@angular/router';
+import { ActivatedRoute, ParamMap, Params, Router, RouterLink } from '@angular/router';
 import { EMPTY, Subject, catchError, combineLatest, startWith, switchMap, tap } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
 import { TipApi } from '../../core/api/tip-api';
@@ -98,6 +98,7 @@ function queriesEqual(left: ListingQuery, right: ListingQuery): boolean {
 }
 
 @Component({
+  imports: [RouterLink],
   selector: 'app-normalized-jobs',
   templateUrl: './normalized-jobs.html',
   styleUrl: './normalized-jobs.scss',

@@ -69,6 +69,87 @@ describe('TipApi', () => {
     request.flush({ items: [], limit: 20, total: 0, page: 1 });
   });
 
+  it('gets a normalized job detail and maps server field names', () => {
+    let result: unknown;
+
+    service.getNormalizedJob('job/1').subscribe((detail) => {
+      result = detail;
+    });
+
+    const request = http.expectOne(`${environment.baseUrl}/jobs/job%2F1`);
+    expect(request.request.method).toBe('GET');
+    request.flush({
+      id: 'job-1',
+      url: 'https://example.com/job-1',
+      title: 'Senior Engineer',
+      company: 'Northwind',
+      location: 'Remote',
+      salary: '$150,000',
+      source: 'career-site',
+      posting_date: '2026-10-13',
+      summary: 'Summary',
+      key_responsibilities: 'Responsibilities',
+      requirements: 'Requirements',
+      desirables: 'Desirables',
+      technical_stack: ['TypeScript'],
+      additionals: ['Remote'],
+      status: 'completed',
+      submitter_id: 'user-1',
+      created_at: '2026-10-13T12:00:00Z',
+      has_write_access: true,
+    });
+
+    expect(result).toEqual({
+      id: 'job-1',
+      url: 'https://example.com/job-1',
+      title: 'Senior Engineer',
+      company: 'Northwind',
+      location: 'Remote',
+      salary: '$150,000',
+      source: 'career-site',
+      postingDate: '2026-10-13',
+      summary: 'Summary',
+      keyResponsibilities: 'Responsibilities',
+      requirements: 'Requirements',
+      desirables: 'Desirables',
+      technicalStack: ['TypeScript'],
+      additionals: ['Remote'],
+      status: 'completed',
+      submitterId: 'user-1',
+      createdAt: '2026-10-13T12:00:00Z',
+      hasWriteAccess: true,
+    });
+  });
+
+  it('updates only normalized job header fields', () => {
+    service
+      .updateNormalizedJob('job-1', {
+        company: 'Northwind',
+        location: 'Remote',
+        salary: '$155,000',
+        source: 'career-site',
+      })
+      .subscribe();
+
+    const request = http.expectOne(`${environment.baseUrl}/jobs/job-1`);
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toEqual({
+      company: 'Northwind',
+      location: 'Remote',
+      salary: '$155,000',
+      source: 'career-site',
+    });
+    request.flush({ id: 'job-1', has_write_access: true, status: 'completed' });
+  });
+
+  it('deletes a normalized job by encoded identifier', () => {
+    service.deleteNormalizedJob('job/1').subscribe();
+
+    const request = http.expectOne(`${environment.baseUrl}/jobs/job%2F1`);
+    expect(request.request.method).toBe('DELETE');
+    request.flush(null);
+  });
+
   it('updates a profile with data and output language', () => {
     const data = { name: 'Ada', skills: { languages: ['TypeScript'] } };
     service.updateProfile(data, 'English').subscribe();

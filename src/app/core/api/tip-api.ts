@@ -3,7 +3,13 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { JobWorkflowItem } from '../models/workflow';
-import { NormalizedJobQuery, NormalizedJobsPage, NormalizedJobsResponse } from '../models/normalized-job';
+import {
+  NormalizedJobDetail,
+  NormalizedJobHeaderUpdate,
+  NormalizedJobQuery,
+  NormalizedJobsPage,
+  NormalizedJobsResponse,
+} from '../models/normalized-job';
 import { environment } from '../../../environments/environment';
 import { RegisterUserRequest, LoginRequest, LoginResponse, RegisterTokenResponse } from '../models/auth.models';
 import { ProfileSession, UserProfile } from '../models/profile.models';
@@ -50,6 +56,28 @@ export class TipApi {
       );
   }
 
+  getNormalizedJob(jobId: string): Observable<NormalizedJobDetail> {
+    return this.http
+      .get<NormalizedJobDetailResponse>(`${this.baseUrl}/jobs/${encodeURIComponent(jobId)}`)
+      .pipe(map(mapNormalizedJobDetail));
+  }
+
+  updateNormalizedJob(
+    jobId: string,
+    update: NormalizedJobHeaderUpdate,
+  ): Observable<NormalizedJobDetail> {
+    return this.http
+      .patch<NormalizedJobDetailResponse>(
+        `${this.baseUrl}/jobs/${encodeURIComponent(jobId)}`,
+        update,
+      )
+      .pipe(map(mapNormalizedJobDetail));
+  }
+
+  deleteNormalizedJob(jobId: string): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/jobs/${encodeURIComponent(jobId)}`);
+  }
+
   getProfile(): Observable<UserProfile> {
     return this.http.get<UserProfile>(`${this.baseUrl}/profile`);
   }
@@ -76,4 +104,54 @@ export class TipApi {
       `${this.baseUrl}/profile/sessions/${encodeURIComponent(sessionId)}`,
     );
   }
+}
+
+interface NormalizedJobDetailResponse {
+  id: string;
+  url?: string | null;
+  title?: string | null;
+  company?: string | null;
+  location?: string | null;
+  salary?: string | number | null;
+  source?: string | null;
+  posting_date?: string | null;
+  postingDate?: string | null;
+  summary?: string | null;
+  key_responsibilities?: string | string[] | null;
+  keyResponsibilities?: string | string[] | null;
+  requirements?: string | string[] | null;
+  desirables?: string | string[] | null;
+  technical_stack?: string[] | null;
+  technicalStack?: string[] | null;
+  additionals?: string[] | null;
+  status?: string;
+  submitter_id?: string | null;
+  submitterId?: string | null;
+  created_at?: string | null;
+  createdAt?: string | null;
+  has_write_access?: boolean;
+  hasWriteAccess?: boolean;
+}
+
+function mapNormalizedJobDetail(response: NormalizedJobDetailResponse): NormalizedJobDetail {
+  return {
+    id: response.id,
+    url: response.url ?? null,
+    title: response.title ?? null,
+    company: response.company ?? null,
+    location: response.location ?? null,
+    salary: response.salary ?? null,
+    source: response.source ?? null,
+    postingDate: response.posting_date ?? response.postingDate ?? null,
+    summary: response.summary ?? null,
+    keyResponsibilities: response.key_responsibilities ?? response.keyResponsibilities ?? null,
+    requirements: response.requirements ?? null,
+    desirables: response.desirables ?? null,
+    technicalStack: response.technical_stack ?? response.technicalStack ?? null,
+    additionals: response.additionals ?? null,
+    status: response.status ?? 'unknown',
+    submitterId: response.submitter_id ?? response.submitterId ?? null,
+    createdAt: response.created_at ?? response.createdAt ?? null,
+    hasWriteAccess: response.has_write_access ?? response.hasWriteAccess ?? false,
+  };
 }

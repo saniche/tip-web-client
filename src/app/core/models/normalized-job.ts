@@ -32,3 +32,31 @@ export interface NormalizedJobsPage {
   total: number;
   page: number;
 }
+
+export interface NormalizedJobDetail {
+  id: string;
+  url: string | null;
+  title: string | null;
+  company: string | null;
+  location: string | null;
+  salary: string | number | null;
+  source: string | null;
+  postingDate: string | null;
+  summary: string | null;
+  keyResponsibilities: string | string[] | null;
+  requirements: string | string[] | null;
+  desirables: string | string[] | null;
+  technicalStack: string[] | null;
+  additionals: string[] | null;
+  status: string;
+  submitterId: string | null;
+  createdAt: string | null;
+  hasWriteAccess: boolean;
+}
+
+export interface NormalizedJobHeaderUpdate {
+  company: string | null;
+  location: string | null;
+  salary: string | null;
+  source: string | null;
+}

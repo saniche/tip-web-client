@@ -33,6 +33,13 @@ export const routes: Routes = [
       import('./pages/normalized-jobs/normalized-jobs').then((page) => page.NormalizedJobs),
   },
   {
+    path: 'normalized-jobs/:id',
+    loadComponent: () =>
+      import('./pages/normalized-job-detail/normalized-job-detail').then(
+        (page) => page.NormalizedJobDetail,
+      ),
+  },
+  {
     path: 'profile',
     component: ProfileComponent,
   },

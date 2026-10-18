@@ -1,0 +1,154 @@
+<section class="normalized-job-detail">
+  <a class="normalized-job-detail__back" routerLink="/normalized-jobs">← Back to normalized jobs</a>
+
+  @if (state() === 'loading') {
+    <p class="normalized-job-detail__status" role="status">Loading job details…</p>
+  } @else if (state() === 'error' || state() === 'not-found') {
+    <div class="normalized-job-detail__message" role="alert">
+      <p>{{ errorMessage() }}</p>
+      @if (state() === 'error') {
+        <button class="btn btn-primary" type="button" (click)="retry()">Retry</button>
+      }
+    </div>
+  } @else if (detail(); as job) {
+    <header class="normalized-job-detail__header">
+      <div>
+        <p class="normalized-job-detail__kicker">Normalized job</p>
+        <h1>{{ displayValue(job.title) }}</h1>
+        <p
+          class="normalized-job-detail__job-status"
+          [class]="'normalized-job-detail__job-status normalized-job-detail__job-status--' + statusClass(job.status)"
+        >
+          Status: <strong>{{ statusLabel(job.status) }}</strong>
+        </p>
+      </div>
+      @if (job.hasWriteAccess) {
+        <div class="normalized-job-detail__actions">
+          @if (!editMode() && state() !== 'delete-confirmation' && state() !== 'deleting') {
+            <button class="btn btn-outline-primary" type="button" (click)="toggleEditMode()">
+              Edit header
+            </button>
+            <button class="btn btn-outline-danger" type="button" (click)="requestDelete()">
+              Delete job
+            </button>
+          }
+        </div>
+      }
+    </header>
+
+    @if (saveError()) {
+      <div class="alert alert-danger" role="alert">{{ saveError() }}</div>
+    }
+    @if (deleteError()) {
+      <div class="alert alert-danger" role="alert">{{ deleteError() }}</div>
+    }
+
+    @if (editMode()) {
+      <form
+        class="normalized-job-detail__edit-form"
+        [formGroup]="editForm"
+        (submit)="$event.preventDefault(); save()"
+      >
+        <div class="row g-3">
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="job-detail-company">Company</label>
+            <input class="form-control" id="job-detail-company" formControlName="company" />
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="job-detail-location">Location</label>
+            <input class="form-control" id="job-detail-location" formControlName="location" />
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="job-detail-salary">Salary</label>
+            <input class="form-control" id="job-detail-salary" formControlName="salary" />
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="job-detail-source">Source</label>
+            <input class="form-control" id="job-detail-source" formControlName="source" />
+          </div>
+        </div>
+        <div class="d-flex gap-2 mt-3">
+          <button class="btn btn-primary" type="submit" [disabled]="state() === 'saving'">
+            {{ state() === 'saving' ? 'Saving…' : 'Save changes' }}
+          </button>
+          <button class="btn btn-outline-secondary" type="button" (click)="cancelEditing()">
+            Cancel
+          </button>
+        </div>
+      </form>
+    } @else {
+      <dl class="normalized-job-detail__summary row g-3">
+        <div class="col-12 col-md-6"><dt>Company</dt><dd>{{ displayValue(job.company) }}</dd></div>
+        <div class="col-12 col-md-6"><dt>Location</dt><dd>{{ displayValue(job.location) }}</dd></div>
+        <div class="col-12 col-md-6"><dt>Salary</dt><dd>{{ displayValue(job.salary) }}</dd></div>
+        <div class="col-12 col-md-6">
+          <dt>Source</dt>
+          <dd>
+            {{ displayValue(job.source) }}
+            @if (job.url && !isEmailSource(job.source)) {
+              <a class="ms-2" [href]="job.url" target="_blank" rel="noopener noreferrer">Open source</a>
+            }
+          </dd>
+        </div>
+        <div class="col-12 col-md-6"><dt>Posting date</dt><dd>{{ displayValue(job.postingDate) }}</dd></div>
+        <div class="col-12 col-md-6"><dt>Created at</dt><dd>{{ displayValue(job.createdAt) }}</dd></div>
+        <div class="col-12 col-md-6"><dt>Submitter</dt><dd>{{ displayValue(job.submitterId) }}</dd></div>
+        <div class="col-12 col-md-6"><dt>Job ID</dt><dd>{{ displayValue(job.id) }}</dd></div>
+      </dl>
+
+      <div class="normalized-job-detail__sections">
+        <article>
+          <details>
+            <summary>Summary</summary>
+            <p>{{ displayValue(job.summary) }}</p>
+          </details>
+        </article>
+        <article>
+          <h2>Key responsibilities</h2>
+          <ul>
+            @for (item of displayTextList(job.keyResponsibilities); track $index) {
+              <li>{{ item }}</li>
+            }
+          </ul>
+        </article>
+        <article>
+          <h2>Requirements</h2>
+          <ul>
+            @for (item of displayTextList(job.requirements); track $index) {
+              <li>{{ item }}</li>
+            }
+          </ul>
+        </article>
+        <article>
+          <h2>Desirables</h2>
+          <ul>
+            @for (item of displayTextList(job.desirables); track $index) {
+              <li>{{ item }}</li>
+            }
+          </ul>
+        </article>
+        <article><h2>Technical stack</h2><p>{{ displayList(job.technicalStack) }}</p></article>
+        <article>
+          <h2>Additional details</h2>
+          <ul>
+            @for (item of displayArrayList(job.additionals); track $index) {
+              <li>{{ item }}</li>
+            }
+          </ul>
+        </article>
+      </div>
+    }
+
+    @if (state() === 'delete-confirmation') {
+      <div class="normalized-job-detail__confirmation alert alert-warning" role="alert">
+        <p>Delete this normalized job? This action cannot be undone.</p>
+        <div class="d-flex gap-2">
+          <button class="btn btn-danger" type="button" (click)="confirmDelete()">Confirm deletion</button>
+          <button class="btn btn-outline-secondary" type="button" (click)="cancelDelete()">Cancel</button>
+        </div>
+      </div>
+    } @else if (state() === 'deleting') {
+      <p class="normalized-job-detail__status" role="status">Deleting job…</p>
+    }
+  }
+</section>

@@ -167,7 +167,9 @@
         <tbody>
           @for (job of jobs(); track job.id) {
             <tr>
-              <td><a href="/details/{{ job.id }}">{{ displayValue(job.title) }}</a></td>
+              <td>
+                <a [routerLink]="['/normalized-jobs', job.id]">{{ displayValue(job.title) }}</a>
+              </td>
               <td>{{ displayValue(job.company) }}</td>
               <td>{{ displayValue(job.location) }}</td>
               <td>{{ displayValue(job.postingDate) }}</td>
