@@ -28,6 +28,11 @@ export const routes: Routes = [
     component: Jobs,
   },
   {
+    path: 'normalize-job',
+    loadComponent: () =>
+      import('./pages/normalize-job/normalize-job').then((page) => page.NormalizeJob),
+  },
+  {
     path: 'normalized-jobs',
     loadComponent: () =>
       import('./pages/normalized-jobs/normalized-jobs').then((page) => page.NormalizedJobs),

@@ -170,4 +170,90 @@ describe('TipApi', () => {
     expect(request.request.body.has('files')).toBe(false);
     request.flush({ id: 'file-1', status: 'queued' });
   });
+
+  it('submits a normalization request with stringified content and maps the response', () => {
+    let result: unknown;
+
+    service
+      .normalizeJob({ url: 'https://example.com/job-1', content: JSON.stringify({ raw: 'html' }) })
+      .subscribe((job) => {
+        result = job;
+      });
+
+    const request = http.expectOne(`${environment.baseUrl}/jobs/normalize`);
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({
+      url: 'https://example.com/job-1',
+      content: JSON.stringify({ raw: 'html' }),
+    });
+    request.flush({
+      id: 'job-1',
+      status: 'pending',
+      processing_job_id: 'proc-1',
+      title: null,
+      url: 'https://example.com/job-1',
+      created_at: '2026-10-17T12:00:00Z',
+    });
+
+    expect(result).toEqual({
+      id: 'job-1',
+      status: 'pending',
+      processingJobId: 'proc-1',
+      title: null,
+      url: 'https://example.com/job-1',
+      createdAt: '2026-10-17T12:00:00Z',
+    });
+  });
+
+  it('maps a normalization response without a processing job id', () => {
+    let result: unknown;
+
+    service.normalizeJob({ url: 'https://example.com/job-2', content: '{}' }).subscribe((job) => {
+      result = job;
+    });
+
+    const request = http.expectOne(`${environment.baseUrl}/jobs/normalize`);
+    request.flush({ id: 'job-2', status: 'failed', processing_job_id: null });
+
+    expect(result).toEqual({
+      id: 'job-2',
+      status: 'failed',
+      processingJobId: null,
+      title: null,
+      url: null,
+      createdAt: null,
+    });
+  });
+
+  it('gets a processing job by encoded identifier and maps server field names', () => {
+    let result: unknown;
+
+    service.getProcessingJob('proc/1').subscribe((processingJob) => {
+      result = processingJob;
+    });
+
+    const request = http.expectOne(`${environment.baseUrl}/processing-jobs/proc%2F1`);
+    expect(request.request.method).toBe('GET');
+    request.flush({ id: 'proc/1', status: 'completed', result_id: 'job-9', error: null });
+
+    expect(result).toEqual({ id: 'proc/1', status: 'completed', resultId: 'job-9', error: null });
+  });
+
+  it('exposes the failure error from a processing job', () => {
+    let result: unknown;
+
+    service.getProcessingJob('proc-2').subscribe((processingJob) => {
+      result = processingJob;
+    });
+
+    const request = http.expectOne(`${environment.baseUrl}/processing-jobs/proc-2`);
+    request.flush({ id: 'proc-2', status: 'failed', result_id: null, error: 'Unable to parse' });
+
+    expect(result).toEqual({
+      id: 'proc-2',
+      status: 'failed',
+      resultId: null,
+      error: 'Unable to parse',
+    });
+  });
 });

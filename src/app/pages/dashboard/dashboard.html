@@ -11,7 +11,40 @@
   <div class="dashboard-actions col-12 col-xl-4">
     <a class="btn btn-primary" routerLink="/auth">Open auth flow</a>
     <a class="btn btn-outline-primary" routerLink="/jobs">Review pipeline</a>
+    <a class="btn btn-outline-primary" routerLink="/normalize-job" data-testid="normalize-link">
+      Normalize job
+    </a>
   </div>
+</section>
+
+<section class="dashboard-card dashboard-normalization">
+  <div class="dashboard-list__header">
+    <h2>Job normalization</h2>
+    <span data-testid="normalization-in-progress">
+      {{ normalizationInProgress() }} in progress
+    </span>
+  </div>
+
+  @if (normalizationJobs().length > 0) {
+    <ul>
+      @for (submission of normalizationJobs(); track submission.id) {
+        <li data-testid="normalization-item">
+          <div>
+            <strong>{{ submission.url }}</strong>
+            <p>Submitted {{ submission.submittedAt }}</p>
+          </div>
+          <div>
+            <span data-testid="normalization-status">{{ submission.status }}</span>
+            @if (submission.status === 'completed' && submission.resultId) {
+              <a [routerLink]="['/normalized-jobs', submission.resultId]">View job</a>
+            }
+          </div>
+        </li>
+      }
+    </ul>
+  } @else {
+    <p>No normalization jobs yet. Submit a job posting to get started.</p>
+  }
 </section>
 
 <section class="dashboard-grid row g-3">

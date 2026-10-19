@@ -1,0 +1,7 @@
+.normalize-job {
+  max-width: 48rem;
+
+  .list-group-item strong {
+    word-break: break-all;
+  }
+}

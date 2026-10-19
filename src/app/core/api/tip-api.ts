@@ -4,6 +4,15 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { JobWorkflowItem } from '../models/workflow';
 import {
+  NormalizeJobRequest,
+  NormalizationJob,
+  NormalizationJobResponse,
+  ProcessingJob,
+  ProcessingJobResponse,
+  mapNormalizationJob,
+  mapProcessingJob,
+} from '../models/normalization';
+import {
   NormalizedJobDetail,
   NormalizedJobHeaderUpdate,
   NormalizedJobQuery,
@@ -11,9 +20,13 @@ import {
   NormalizedJobsResponse,
 } from '../models/normalized-job';
 import { environment } from '../../../environments/environment';
-import { RegisterUserRequest, LoginRequest, LoginResponse, RegisterTokenResponse } from '../models/auth.models';
+import {
+  RegisterUserRequest,
+  LoginRequest,
+  LoginResponse,
+  RegisterTokenResponse,
+} from '../models/auth.models';
 import { ProfileSession, UserProfile } from '../models/profile.models';
-
 
 @Injectable({ providedIn: 'root' })
 export class TipApi {
@@ -24,8 +37,8 @@ export class TipApi {
     return this.http.post<LoginResponse>(`${this.baseUrl}/auth/login`, payload);
   }
 
-  register(payload: RegisterUserRequest): Observable<RegisterTokenResponse>{
-     return this.http.post<RegisterTokenResponse>(`${this.baseUrl}/auth/register`, payload);
+  register(payload: RegisterUserRequest): Observable<RegisterTokenResponse> {
+    return this.http.post<RegisterTokenResponse>(`${this.baseUrl}/auth/register`, payload);
   }
 
   listJobs(): Observable<JobWorkflowItem[]> {
@@ -33,9 +46,7 @@ export class TipApi {
   }
 
   listNormalizedJobs(query: Partial<NormalizedJobQuery> = {}): Observable<NormalizedJobsPage> {
-    let params = new HttpParams()
-      .set('page', query.page ?? 1)
-      .set('limit', query.limit ?? 20);
+    let params = new HttpParams().set('page', query.page ?? 1).set('limit', query.limit ?? 20);
 
     for (const filter of ['title', 'company', 'location', 'source'] as const) {
       const value = query[filter]?.trim();
@@ -76,6 +87,20 @@ export class TipApi {
 
   deleteNormalizedJob(jobId: string): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/jobs/${encodeURIComponent(jobId)}`);
+  }
+
+  normalizeJob(request: NormalizeJobRequest): Observable<NormalizationJob> {
+    return this.http
+      .post<NormalizationJobResponse>(`${this.baseUrl}/jobs/normalize`, request)
+      .pipe(map(mapNormalizationJob));
+  }
+
+  getProcessingJob(processingJobId: string): Observable<ProcessingJob> {
+    return this.http
+      .get<ProcessingJobResponse>(
+        `${this.baseUrl}/processing-jobs/${encodeURIComponent(processingJobId)}`,
+      )
+      .pipe(map(mapProcessingJob));
   }
 
   getProfile(): Observable<UserProfile> {

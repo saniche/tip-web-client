@@ -81,14 +81,21 @@ describe('NormalizedJobs', () => {
     )!;
   }
 
+  it('links to the normalize job page', () => {
+    render();
+
+    const link = root().querySelector<HTMLAnchorElement>('[data-testid="normalize-link"]');
+    expect(link).toBeTruthy();
+  });
+
   it('loads the default page and renders each job field in service order', () => {
     render();
 
     expect(api.listNormalizedJobs).toHaveBeenCalledWith({ page: 1, limit: 20 });
     const rows = root().querySelectorAll<HTMLTableRowElement>('tbody tr');
     expect(Array.from(rows).map((row) => row.cells[0].textContent.trim())).toEqual([
-      'job-1',
-      'job-2',
+      'Senior Engineer',
+      '—',
     ]);
     expect(rows[0].textContent).toContain('Senior Engineer');
     expect(rows[0].textContent).toContain('Northwind');
