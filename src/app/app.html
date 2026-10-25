@@ -3,17 +3,26 @@
     <div class="container-fluid app-shell__header-inner">
       <div class="app-shell__identity">
         <a class="app-shell__brand" routerLink="/dashboard">{{ appName }}</a>
-        <p class="app-shell__tagline">
-        Job Normalization, and application workflows.
-        </p>
+        <p class="app-shell__tagline">Job Normalization, and application workflows.</p>
       </div>
 
       <nav class="app-shell__nav" aria-label="Primary">
-        <a routerLink="/dashboard" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }">
+        <a
+          routerLink="/dashboard"
+          routerLinkActive="is-active"
+          [routerLinkActiveOptions]="{ exact: true }"
+        >
           Dashboard
         </a>
         <a routerLink="/normalized-jobs" routerLinkActive="is-active">Normalized jobs</a>
-        <a routerLink="/jobs" routerLinkActive="is-active">Jobs</a>
+        <a
+          routerLink="/jobs"
+          routerLinkActive="is-active"
+          [routerLinkActiveOptions]="{ exact: true }"
+          >Jobs</a
+        >
+        <a routerLink="/jobs/interests" routerLinkActive="is-active">Interests</a>
+        <a routerLink="/applications" routerLinkActive="is-active">Application journal</a>
         <a routerLink="/profile" routerLinkActive="is-active">Profile</a>
       </nav>
 
@@ -29,7 +38,10 @@
   </header>
 
   <section class="app-shell__status">
-    <div class="container-fluid d-flex flex-wrap gap-2 align-items-center" aria-label="Workflow status">
+    <div
+      class="container-fluid d-flex flex-wrap gap-2 align-items-center"
+      aria-label="Workflow status"
+    >
       <strong>Next action:</strong>
       <span>{{ nextAction() }}</span>
     </div>

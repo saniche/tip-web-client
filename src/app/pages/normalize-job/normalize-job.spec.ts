@@ -139,4 +139,21 @@ describe('NormalizeJob', () => {
 
     expect(storeMock.dismiss).toHaveBeenCalledWith('sub-1');
   });
+
+  it('relies on the backend to record interests without client-side duplicate interest calls', () => {
+    // Normalization submission delegates interest recording exclusively to backend
+    storeMock.submit.mockReturnValue('sub-1');
+    const button: HTMLButtonElement = fixture.nativeElement.querySelector('[data-testid="submit"]');
+
+    component['form'].setValue({
+      url: 'https://example.com/job-1',
+      content: 'Job content here',
+    });
+    fixture.detectChanges();
+
+    button.click();
+    fixture.detectChanges();
+
+    expect(storeMock.submit).toHaveBeenCalledWith('https://example.com/job-1', 'Job content here');
+  });
 });

@@ -1,0 +1,379 @@
+<section class="application-journal-entry">
+  <a class="application-journal-entry__back" routerLink="/applications">← Back to applications</a>
+
+  @if (state() === 'loading') {
+    <p class="application-journal-entry__status" role="status">Loading application…</p>
+  } @else if (state() === 'error') {
+    <div class="application-journal-entry__message" role="alert">
+      <p>{{ errorMessage() }}</p>
+      <button class="btn btn-primary" type="button" (click)="retryEntry()">Retry</button>
+    </div>
+  } @else if (isCreating() || entry()) {
+    <header class="application-journal-entry__header">
+      <div>
+        <p class="application-journal-entry__kicker">Career tracking</p>
+        <h1>{{ isCreating() ? 'Add application' : displayValue(loadedEntry.job.title) }}</h1>
+        @if (!isCreating()) {
+          <p class="application-journal-entry__job-subtitle">
+            {{ displayValue(loadedEntry.job.company) }} ·
+            {{ displayValue(loadedEntry.job.location) }}
+          </p>
+        }
+      </div>
+      @if (!isCreating()) {
+        <span class="application-journal-entry__status-badge">
+          {{ statusLabel(loadedEntry.status) }}
+        </span>
+      }
+    </header>
+
+    @if (saveError()) {
+      <div class="alert alert-danger" role="alert">{{ saveError() }}</div>
+    }
+    @if (statusError()) {
+      <div class="alert alert-danger" role="alert">{{ statusError() }}</div>
+    }
+    @if (deleteError()) {
+      <div class="alert alert-danger" role="alert">{{ deleteError() }}</div>
+    }
+
+    @if (isCreating()) {
+      <section class="application-journal-entry__job-picker" aria-labelledby="job-picker-title">
+        <h2 id="job-picker-title">Choose a normalized job</h2>
+        @if (selectedJob(); as job) {
+          <div class="application-journal-entry__selected-job">
+            <div>
+              <strong>{{ displayValue(job.title) }}</strong>
+              <p>{{ displayValue(job.company) }} · {{ displayValue(job.location) }}</p>
+            </div>
+            <button
+              class="btn btn-sm btn-outline-secondary"
+              type="button"
+              [disabled]="state() === 'saving'"
+              (click)="clearSelectedJob()"
+            >
+              Change job
+            </button>
+          </div>
+        } @else {
+          <div class="row g-3">
+            <div class="col-12 col-md-4">
+              <label class="form-label" for="application-job-title-filter">Job title</label>
+              <input
+                class="form-control"
+                id="application-job-title-filter"
+                type="search"
+                [value]="jobFilters().title ?? ''"
+                (input)="updateJobFilter('title', $event)"
+              />
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="form-label" for="application-job-company-filter">Company</label>
+              <input
+                class="form-control"
+                id="application-job-company-filter"
+                type="search"
+                [value]="jobFilters().company ?? ''"
+                (input)="updateJobFilter('company', $event)"
+              />
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="form-label" for="application-job-location-filter">Location</label>
+              <input
+                class="form-control"
+                id="application-job-location-filter"
+                type="search"
+                [value]="jobFilters().location ?? ''"
+                (input)="updateJobFilter('location', $event)"
+              />
+            </div>
+          </div>
+
+          @if (jobSearchState() === 'loading') {
+            <p class="application-journal-entry__status" role="status">
+              Searching normalized jobs…
+            </p>
+          } @else if (jobSearchState() === 'error') {
+            <div class="alert alert-danger mt-3" role="alert">
+              <p>{{ jobSearchError() }}</p>
+              <button class="btn btn-primary" type="button" (click)="retryJobSearch()">
+                Retry
+              </button>
+            </div>
+          } @else if (jobSearchState() === 'empty') {
+            <p class="mt-3" role="status">No normalized jobs match this search.</p>
+          } @else {
+            <div class="list-group mt-3">
+              @for (job of jobResults(); track job.id) {
+                <button
+                  class="list-group-item list-group-item-action"
+                  type="button"
+                  [disabled]="state() === 'saving'"
+                  (click)="selectJob(job)"
+                >
+                  <strong>{{ displayValue(job.title) }}</strong>
+                  <span class="d-block">
+                    {{ displayValue(job.company) }} · {{ displayValue(job.location) }}
+                  </span>
+                </button>
+              }
+            </div>
+            <div
+              class="application-journal-entry__job-pagination"
+              aria-label="Normalized job search pagination"
+            >
+              <span
+                >Page {{ jobPage() }} of {{ jobTotalPages() }} · {{ jobResultTotal() }} jobs</span
+              >
+              <div class="d-flex gap-2">
+                <button
+                  class="btn btn-sm btn-outline-secondary"
+                  type="button"
+                  [disabled]="jobPage() <= 1"
+                  (click)="previousJobPage()"
+                >
+                  Previous
+                </button>
+                <button
+                  class="btn btn-sm btn-outline-secondary"
+                  type="button"
+                  [disabled]="jobPage() >= jobTotalPages()"
+                  (click)="nextJobPage()"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          }
+        }
+      </section>
+    }
+
+    @if (!isCreating()) {
+      <dl class="application-journal-entry__job-summary row g-3">
+        <div class="col-12 col-md-4">
+          <dt>Company</dt>
+          <dd>{{ displayValue(loadedEntry.job.company) }}</dd>
+        </div>
+        <div class="col-12 col-md-4">
+          <dt>Location</dt>
+          <dd>{{ displayValue(loadedEntry.job.location) }}</dd>
+        </div>
+        <div class="col-12 col-md-4">
+          <dt>Posting date</dt>
+          <dd>{{ formatDate(loadedEntry.job.postingDate) }}</dd>
+        </div>
+        <div class="col-6">
+          <dt>Original posting</dt>
+          <dd>
+            @if (originalPostingUrl(loadedEntry); as postingUrl) {
+              <a [href]="postingUrl" target="_blank" rel="noopener noreferrer">
+                Open original posting
+              </a>
+            } @else {
+              {{ displayValue(loadedEntry.job.source) }}
+            }
+          </dd>
+        </div>
+        <div class="col-6">
+          <dt>Local posting</dt>
+          <dd>
+            @if (loadedEntry.job.id; as jobId) {
+              <a href="/normalized-jobs/{{ jobId }}" target="_blank" rel="noopener noreferrer">
+                Open local posting
+              </a>
+            } @else {
+              {{ displayValue(loadedEntry.job.source) }}
+            }
+          </dd>
+        </div>
+      </dl>
+    }
+
+    <form
+      class="application-journal-entry__form"
+      [formGroup]="editForm"
+      (submit)="saveEntry($event)"
+    >
+      <h2>{{ isCreating() ? 'Application details' : 'Edit application details' }}</h2>
+      <fieldset [disabled]="state() !== 'loaded'">
+        <div class="row g-3">
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="application-recruiter-name">Recruiter name</label>
+            <input
+              class="form-control"
+              id="application-recruiter-name"
+              formControlName="recruiterName"
+              autocomplete="name"
+            />
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="application-recruiter-email">Recruiter email</label>
+            <input
+              class="form-control"
+              id="application-recruiter-email"
+              type="email"
+              formControlName="recruiterEmail"
+              autocomplete="email"
+            />
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="application-recruiter-phone">Recruiter phone</label>
+            <input class="form-control" id="application-recruiter-phone" type="tel" formControlName="recruiterPhone"
+              autocomplete="phone" />
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="application-contact-date">Contact date</label>
+            <input
+              class="form-control"
+              id="application-contact-date"
+              type="date"
+              formControlName="contactDate"
+            />
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="application-follow-up-date">Follow-up date</label>
+            <input
+              class="form-control"
+              id="application-follow-up-date"
+              type="date"
+              formControlName="followUpDate"
+            />
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="application-work-authorization">
+              Work authorization discussed
+            </label>
+            <select
+              class="form-select"
+              id="application-work-authorization"
+              formControlName="workAuthorizationDiscussed"
+            >
+              <option value="unknown">Not recorded</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="application-notes">Notes</label>
+            <textarea
+              class="form-control"
+              id="application-notes"
+              rows="4"
+              formControlName="notes"
+            ></textarea>
+          </div>
+        </div>
+      </fieldset>
+      <div class="d-flex flex-wrap gap-2 mt-3">
+        <button
+          class="btn btn-primary"
+          type="submit"
+          [disabled]="state() !== 'loaded' || (isCreating() && !selectedJob())"
+        >
+          {{
+            state() === 'saving' ? 'Saving…' : isCreating() ? 'Create application' : 'Save changes'
+          }}
+        </button>
+        @if (!isCreating()) {
+          <button
+            class="btn btn-outline-secondary"
+            type="button"
+            [disabled]="state() !== 'loaded'"
+            (click)="cancelEditing()"
+          >
+            Reset changes
+          </button>
+        }
+      </div>
+    </form>
+
+    @if (!isCreating()) {
+      <section class="application-journal-entry__status-management" aria-labelledby="status-title">
+        <h2 id="status-title">Application status</h2>
+        <p>
+          Current status: <strong>{{ statusLabel(loadedEntry.status) }}</strong>
+        </p>
+        <form [formGroup]="statusForm" (submit)="updateStatus($event)">
+          <div class="row g-3">
+            <div class="col-12 col-md-5">
+              <label class="form-label" for="application-status">Status</label>
+              <select class="form-select" id="application-status" formControlName="status">
+                @for (option of statusOptions; track option.value) {
+                  <option [value]="option.value">{{ option.label }}</option>
+                }
+              </select>
+            </div>
+            <div class="col-12 col-md-7">
+              <label class="form-label" for="application-status-note">Change note (optional)</label>
+              <input class="form-control" id="application-status-note" formControlName="note" />
+            </div>
+          </div>
+          <button
+            class="btn btn-outline-primary mt-3"
+            type="submit"
+            [disabled]="state() !== 'loaded'"
+          >
+            {{ state() === 'updating-status' ? 'Updating…' : 'Update status' }}
+          </button>
+        </form>
+      </section>
+
+      <section class="application-journal-entry__history" aria-labelledby="history-title">
+        <h2 id="history-title">Status history</h2>
+        @if (loadedEntry.statusHistory.length > 0) {
+          <ol class="application-journal-entry__history-list">
+            @for (event of loadedEntry.statusHistory; track event.id ?? $index) {
+              <li>
+                <div class="application-journal-entry__history-heading">
+                  <strong>{{ statusLabel(event.status) }}</strong>
+                  <time [attr.datetime]="event.changedAt">{{
+                    formatDateTime(event.changedAt)
+                  }}</time>
+                </div>
+                @if (event.note) {
+                  <p>{{ event.note }}</p>
+                }
+              </li>
+            }
+          </ol>
+        } @else {
+          <p>No status history is available.</p>
+        }
+      </section>
+
+      <section class="application-journal-entry__delete" aria-label="Delete application">
+        @if (confirmingDelete()) {
+          <div class="alert alert-warning" role="alert">
+            <p>Delete this application entry? The normalized job will remain available.</p>
+            <div class="d-flex gap-2">
+              <button
+                class="btn btn-danger"
+                type="button"
+                [disabled]="state() === 'deleting'"
+                (click)="confirmDelete()"
+              >
+                Confirm deletion
+              </button>
+              <button class="btn btn-outline-secondary" type="button" (click)="cancelDelete()">
+                Cancel
+              </button>
+            </div>
+          </div>
+        } @else {
+          <button
+            class="btn btn-outline-danger"
+            type="button"
+            [disabled]="state() !== 'loaded'"
+            (click)="requestDelete()"
+          >
+            Delete application
+          </button>
+        }
+        @if (state() === 'deleting') {
+          <p class="mt-2" role="status">Deleting application…</p>
+        }
+      </section>
+    }
+  }
+</section>

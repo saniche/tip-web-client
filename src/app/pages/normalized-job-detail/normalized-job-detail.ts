@@ -37,6 +37,10 @@ export class NormalizedJobDetail {
   protected readonly errorMessage = signal('');
   protected readonly saveError = signal('');
   protected readonly deleteError = signal('');
+  protected readonly interestError = signal('');
+  protected readonly isInterested = signal<boolean | null>(null);
+  protected readonly isApplied = signal<boolean | null>(null);
+  protected readonly interestLoading = signal(false);
   protected readonly editForm = new FormGroup({
     company: new FormControl('', { nonNullable: true }),
     location: new FormControl('', { nonNullable: true }),
@@ -54,6 +58,7 @@ export class NormalizedJobDetail {
           const jobId = params.get('id')?.trim();
           if (!jobId) {
             this.detail.set(null);
+            this.isInterested.set(null);
             this.errorMessage.set('This job could not be identified.');
             this.state.set('not-found');
             return EMPTY;
@@ -63,6 +68,9 @@ export class NormalizedJobDetail {
           this.errorMessage.set('');
           this.saveError.set('');
           this.deleteError.set('');
+          this.interestError.set('');
+          this.isInterested.set(null);
+          this.isApplied.set(null);
 
           return this.api.getNormalizedJob(jobId).pipe(
             tap((detail) => {
@@ -70,12 +78,20 @@ export class NormalizedJobDetail {
                 throw new Error('The service returned a job without a valid identifier.');
               }
               this.detail.set(detail);
+              this.isInterested.set(detail.isInterested);
+              this.isApplied.set(detail.isApplied);
+              this.interestError.set(
+                detail.isInterested === null
+                  ? "Unable to determine this job's interest status. Please refresh the page or try again."
+                  : '',
+              );
               this.resetEditable(detail);
               this.state.set('loaded');
             }),
             catchError((error: unknown) => {
               console.error(error);
               this.detail.set(null);
+              this.isInterested.set(null);
               this.errorMessage.set(
                 error instanceof HttpErrorResponse && error.status === 404
                   ? 'This normalized job is no longer available.'
@@ -196,8 +212,10 @@ export class NormalizedJobDetail {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (updated) => {
-          this.detail.set(updated);
-          this.resetEditable(updated);
+          const saved = { ...updated, isInterested: updated.isInterested ?? this.isInterested() };
+          this.detail.set(saved);
+          this.isInterested.set(saved.isInterested);
+          this.resetEditable(saved);
           this.state.set('loaded');
         },
         error: (error: unknown) => {
@@ -241,6 +259,37 @@ export class NormalizedJobDetail {
           this.state.set('loaded');
         },
       });
+  }
+
+  protected toggleInterest(): void {
+    const current = this.detail();
+    const currentlyInterested = this.isInterested();
+    if (!current?.id || currentlyInterested === null || this.interestLoading()) {
+      return;
+    }
+
+    this.interestLoading.set(true);
+    this.interestError.set('');
+
+    const operation$ = currentlyInterested
+      ? this.api.removeInterest(current.id)
+      : this.api.addInterest(current.id);
+
+    operation$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.isInterested.set(!currentlyInterested);
+        this.interestLoading.set(false);
+      },
+      error: (error: unknown) => {
+        console.error(error);
+        this.interestLoading.set(false);
+        this.interestError.set(
+          currentlyInterested
+            ? 'Unable to remove interest. Please try again.'
+            : 'Unable to add interest. Please try again.',
+        );
+      },
+    });
   }
 
   protected retry(): void {

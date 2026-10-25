@@ -25,6 +25,7 @@ const detail: JobDetail = {
   submitterId: 'user-1',
   createdAt: '2026-10-13T12:00:00Z',
   hasWriteAccess: true,
+  isInterested: false,
 };
 
 describe('NormalizedJobDetail', () => {
@@ -33,6 +34,8 @@ describe('NormalizedJobDetail', () => {
     getNormalizedJob: ReturnType<typeof vi.fn>;
     updateNormalizedJob: ReturnType<typeof vi.fn>;
     deleteNormalizedJob: ReturnType<typeof vi.fn>;
+    addInterest: ReturnType<typeof vi.fn>;
+    removeInterest: ReturnType<typeof vi.fn>;
   };
   let router: { navigateByUrl: ReturnType<typeof vi.fn> };
   let params: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
@@ -42,6 +45,8 @@ describe('NormalizedJobDetail', () => {
       getNormalizedJob: vi.fn(() => of(detail)),
       updateNormalizedJob: vi.fn(() => of(detail)),
       deleteNormalizedJob: vi.fn(() => of(undefined)),
+      addInterest: vi.fn(() => of(undefined)),
+      removeInterest: vi.fn(() => of(undefined)),
     };
     router = { navigateByUrl: vi.fn().mockResolvedValue(true) };
     params = new BehaviorSubject(convertToParamMap({ id: 'job-1' }));
@@ -210,5 +215,61 @@ describe('NormalizedJobDetail', () => {
 
     expect(root().textContent).toContain('Unable to save these changes.');
     expect(root().querySelector<HTMLInputElement>('#job-detail-company')?.value).toBe('Fabrikam');
+  });
+
+  it('toggles interest status by adding and removing interest', () => {
+    render();
+
+    // Initial state: not interested -> button shows 'Add to interests'
+    const addBtn = button('Add to interests');
+    expect(addBtn).toBeTruthy();
+
+    addBtn.click();
+    fixture.detectChanges();
+
+    expect(api.addInterest).toHaveBeenCalledWith('job-1');
+
+    // State updated to interested -> button shows 'Remove from interests'
+    const removeBtn = button('Remove from interests');
+    expect(removeBtn).toBeTruthy();
+
+    removeBtn.click();
+    fixture.detectChanges();
+
+    expect(api.removeInterest).toHaveBeenCalledWith('job-1');
+  });
+
+  it('initializes the toggle from the loaded interest status', () => {
+    api.getNormalizedJob.mockReturnValue(of({ ...detail, isInterested: true }));
+    render();
+
+    expect(button('Remove from interests')).toBeTruthy();
+    button('Remove from interests').click();
+
+    expect(api.removeInterest).toHaveBeenCalledWith('job-1');
+    expect(api.addInterest).not.toHaveBeenCalled();
+  });
+
+  it('does not offer an add action when the backend omits interest status', () => {
+    api.getNormalizedJob.mockReturnValue(of({ ...detail, isInterested: null }));
+    render();
+
+    expect(button('Interest status unavailable').disabled).toBe(true);
+    expect(root().textContent).toContain("Unable to determine this job's interest status");
+
+    button('Interest status unavailable').click();
+    expect(api.addInterest).not.toHaveBeenCalled();
+    expect(api.removeInterest).not.toHaveBeenCalled();
+  });
+
+  it('displays an error message when interest toggle fails', () => {
+    api.addInterest.mockReturnValue(throwError(() => new Error('Server error')));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    render();
+    button('Add to interests').click();
+    fixture.detectChanges();
+
+    expect(root().textContent).toContain('Unable to add interest');
   });
 });

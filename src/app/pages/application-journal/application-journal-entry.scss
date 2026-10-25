@@ -1,0 +1,142 @@
+.application-journal-entry {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+
+  &__back {
+    display: inline-block;
+    margin-bottom: 1.5rem;
+  }
+
+  &__header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  &__kicker {
+    margin-bottom: 0.35rem;
+    color: var(--bs-secondary);
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  &__job-subtitle {
+    color: var(--bs-secondary-color);
+  }
+
+  &__status-badge {
+    padding: 0.35rem 0.75rem;
+    color: var(--bs-primary-text-emphasis);
+    background: var(--bs-primary-bg-subtle);
+    border-radius: 999px;
+    font-weight: 600;
+  }
+
+  &__job-picker,
+  &__job-summary,
+  &__form,
+  &__status-management,
+  &__history,
+  &__delete {
+    margin-top: 1.5rem;
+    padding: 1.25rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.75rem;
+  }
+
+  &__job-picker h2,
+  &__form h2,
+  &__status-management h2,
+  &__history h2 {
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+  }
+
+  &__selected-job {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--bs-light);
+    border-radius: 0.5rem;
+  }
+
+  &__selected-job p {
+    margin: 0.25rem 0 0;
+  }
+
+  &__job-pagination,
+  &__history-heading {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  &__job-pagination {
+    margin-top: 1rem;
+  }
+
+  &__job-summary {
+    margin-right: 0;
+    margin-left: 0;
+  }
+
+  &__job-summary dt {
+    color: var(--bs-secondary-color);
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+
+  &__job-summary dd {
+    margin-bottom: 0;
+  }
+
+  &__status,
+  &__message {
+    margin-top: 1.5rem;
+  }
+
+  &__status {
+    color: var(--bs-secondary);
+  }
+
+  &__history-list {
+    display: grid;
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__history-list li {
+    padding: 1rem;
+    border-left: 0.25rem solid var(--bs-primary);
+    background: var(--bs-light);
+  }
+
+  &__history-list time {
+    color: var(--bs-secondary-color);
+  }
+
+  &__history-list p {
+    margin: 0.5rem 0 0;
+    white-space: pre-wrap;
+  }
+
+  fieldset {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+}

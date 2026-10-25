@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { ApplicationJournalEntry, ApplicationPage } from '../models/application-journal';
 import { NormalizedJobsPage } from '../models/normalized-job';
 import { TipApi } from './tip-api';
 import { environment } from '../../../environments/environment';
@@ -19,6 +20,223 @@ describe('TipApi', () => {
 
   it('should be created', () => {
     expect(service).toBeTruthy();
+  });
+
+  it('lists applications with trimmed server filters and maps page metadata and history', () => {
+    let result: ApplicationPage | undefined;
+
+    service
+      .listApplications({
+        title: ' Engineer ',
+        company: ' Northwind ',
+        location: ' ',
+        page: 2,
+        limit: 10,
+      })
+      .subscribe((page) => {
+        result = page;
+      });
+
+    const request = http.expectOne(
+      (candidate) => candidate.url === `${environment.baseUrl}/applications/`,
+    );
+    expect(request.request.method).toBe('GET');
+    expect(request.request.params.get('title')).toBe('Engineer');
+    expect(request.request.params.get('company')).toBe('Northwind');
+    expect(request.request.params.has('location')).toBe(false);
+    expect(request.request.params.get('page')).toBe('2');
+    expect(request.request.params.get('limit')).toBe('10');
+    request.flush({
+      items: [
+        {
+          id: 'application-1',
+          created_at: '2026-10-22T12:00:00Z',
+          status: 'NotStarted',
+          job: {
+            id: 'job-1',
+            title: 'Senior Engineer',
+            company: 'Northwind',
+            location: 'Remote',
+            posting_date: '2026-10-20',
+            url: 'https://example.com/job-1',
+          },
+          status_history: [
+            { id: 'history-1', status: 'NotStarted', changed_at: '2026-10-22T12:00:00Z' },
+            {
+              id: 'history-2',
+              status: 'Applied',
+              changed_at: '2026-10-23T12:00:00Z',
+              note: 'Submitted application',
+            },
+          ],
+        },
+      ],
+      page: 2,
+      limit: 10,
+      total: 11,
+    });
+
+    expect(result).toEqual({
+      items: [
+        {
+          id: 'application-1',
+          createdAt: '2026-10-22T12:00:00Z',
+          updatedAt: null,
+          status: 'Applied',
+          job: {
+            id: 'job-1',
+            title: 'Senior Engineer',
+            company: 'Northwind',
+            location: 'Remote',
+            postingDate: '2026-10-20',
+            source: null,
+            url: 'https://example.com/job-1',
+          },
+          recruiterName: null,
+          recruiterEmail: null,
+          contactDate: null,
+          followUpDate: null,
+          workAuthorizationDiscussed: null,
+          notes: null,
+          statusHistory: [
+            {
+              id: 'history-1',
+              status: 'NotStarted',
+              changedAt: '2026-10-22T12:00:00Z',
+              note: null,
+            },
+            {
+              id: 'history-2',
+              status: 'Applied',
+              changedAt: '2026-10-23T12:00:00Z',
+              note: 'Submitted application',
+            },
+          ],
+        },
+      ],
+      page: 2,
+      limit: 10,
+      total: 11,
+    });
+  });
+
+  it('uses default page and page size when listing applications', () => {
+    service.listApplications().subscribe();
+
+    const request = http.expectOne(
+      (candidate) => candidate.url === `${environment.baseUrl}/applications/`,
+    );
+    expect(request.request.params.get('page')).toBe('1');
+    expect(request.request.params.get('limit')).toBe('20');
+    request.flush({ items: [], page: 1, limit: 20, total: 0 });
+  });
+
+  it('creates an application without sending client-owned status or interest changes', () => {
+    const requestData = {
+      jobId: 'job-1',
+      recruiterName: 'Avery Recruiter',
+      recruiterEmail: 'avery@example.com',
+      contactDate: '2026-10-24',
+      followUpDate: '2026-10-31',
+      workAuthorizationDiscussed: true,
+      notes: 'Initial call',
+    };
+    let result: ApplicationJournalEntry | undefined;
+
+    service.createApplication(requestData).subscribe((entry) => {
+      result = entry;
+    });
+
+    const request = http.expectOne(`${environment.baseUrl}/applications/`);
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({
+      job_id: 'job-1',
+      recruiter_name: 'Avery Recruiter',
+      recruiter_email: 'avery@example.com',
+      contact_date: '2026-10-24',
+      follow_up_date: '2026-10-31',
+      work_authorization_discussed: true,
+      notes: 'Initial call',
+    });
+    request.flush({
+      id: 'application-1',
+      status: 'NotStarted',
+      job: { id: 'job-1', title: 'Engineer' },
+    });
+
+    expect(result?.status).toBe('NotStarted');
+    expect(result?.job.id).toBe('job-1');
+    http.expectNone(`${environment.baseUrl}/jobs/job-1/interest`);
+  });
+
+  it('gets and updates only editable application fields', () => {
+    service.getApplication('application/1').subscribe();
+    const getRequest = http.expectOne(`${environment.baseUrl}/applications/application%2F1/`);
+    expect(getRequest.request.method).toBe('GET');
+    getRequest.flush({
+      id: 'application-1',
+      status: 'Registered',
+      job: { id: 'job-1' },
+    });
+
+    service
+      .updateApplication('application/1', {
+        recruiterName: 'Avery',
+        recruiterEmail: null,
+        contactDate: null,
+        followUpDate: '2026-10-31',
+        workAuthorizationDiscussed: false,
+        notes: 'Follow up',
+      })
+      .subscribe();
+    const patchRequest = http.expectOne(`${environment.baseUrl}/applications/application%2F1/`);
+    expect(patchRequest.request.method).toBe('PATCH');
+    expect(patchRequest.request.body).toEqual({
+      recruiter_name: 'Avery',
+      recruiter_email: null,
+      contact_date: null,
+      follow_up_date: '2026-10-31',
+      work_authorization_discussed: false,
+      notes: 'Follow up',
+    });
+    expect(patchRequest.request.body).not.toHaveProperty('job_id');
+    expect(patchRequest.request.body).not.toHaveProperty('status');
+    patchRequest.flush(null);
+    const refreshedRequest = http.expectOne(`${environment.baseUrl}/applications/application%2F1/`);
+    expect(refreshedRequest.request.method).toBe('GET');
+    refreshedRequest.flush({
+      id: 'application-1',
+      status: 'Registered',
+      job: { id: 'job-1' },
+    });
+  });
+
+  it('updates application status with an optional trimmed note', () => {
+    service
+      .updateApplicationStatus('application/1', 'Interview', '  Interview scheduled  ')
+      .subscribe();
+    const request = http.expectOne(`${environment.baseUrl}/applications/application%2F1/status`);
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toEqual({
+      status: 'Interview',
+      note: 'Interview scheduled',
+    });
+    request.flush({});
+
+    service.updateApplicationStatus('application-1', 'Closed').subscribe();
+    const withoutNoteRequest = http.expectOne(
+      `${environment.baseUrl}/applications/application-1/status`,
+    );
+    expect(withoutNoteRequest.request.body).toEqual({ status: 'Closed' });
+    withoutNoteRequest.flush({});
+  });
+
+  it('deletes an application by encoded identifier', () => {
+    service.deleteApplication('application/1').subscribe();
+
+    const request = http.expectOne(`${environment.baseUrl}/applications/application%2F1/`);
+    expect(request.request.method).toBe('DELETE');
+    request.flush(null);
   });
 
   it('lists normalized jobs with filters and maps the paginated response', () => {
@@ -97,6 +315,7 @@ describe('TipApi', () => {
       submitter_id: 'user-1',
       created_at: '2026-10-13T12:00:00Z',
       has_write_access: true,
+      is_interested: true,
     });
 
     expect(result).toEqual({
@@ -118,6 +337,7 @@ describe('TipApi', () => {
       submitterId: 'user-1',
       createdAt: '2026-10-13T12:00:00Z',
       hasWriteAccess: true,
+      isInterested: true,
     });
   });
 
@@ -255,5 +475,76 @@ describe('TipApi', () => {
       resultId: null,
       error: 'Unable to parse',
     });
+  });
+
+  it('lists interests with filters and maps the paginated response', () => {
+    const interest = {
+      id: 'interest-1',
+      createdAt: '2026-10-22T20:00:00Z',
+      userId: 'user-1',
+      job: {
+        id: 'job-1',
+        title: 'Lead Architect',
+        company: 'Contoso',
+        location: 'Remote',
+        postingDate: '2026-10-20',
+        source: 'https://example.com/job',
+      },
+    };
+    let result: unknown;
+
+    service
+      .listInterests({
+        title: ' Architect ',
+        company: ' Contoso ',
+        location: '  ',
+        page: 2,
+        limit: 15,
+      })
+      .subscribe((page) => {
+        result = page;
+      });
+
+    const request = http.expectOne(
+      (candidate) => candidate.url === `${environment.baseUrl}/jobs/interests`,
+    );
+    expect(request.request.method).toBe('GET');
+    expect(request.request.params.get('title')).toBe('Architect');
+    expect(request.request.params.get('company')).toBe('Contoso');
+    expect(request.request.params.has('location')).toBe(false);
+    expect(request.request.params.get('page')).toBe('2');
+    expect(request.request.params.get('limit')).toBe('15');
+    request.flush({ items: [interest], limit: 15, total: 35, page: 2 });
+
+    expect(result).toEqual({ items: [interest], limit: 15, total: 35, page: 2 });
+  });
+
+  it('adds an interest by sending a POST request to the encoded job endpoint', () => {
+    let completed = false;
+
+    service.addInterest('job/1').subscribe(() => {
+      completed = true;
+    });
+
+    const request = http.expectOne(`${environment.baseUrl}/jobs/job%2F1/interest`);
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({});
+    request.flush(null);
+
+    expect(completed).toBe(true);
+  });
+
+  it('removes an interest by sending a DELETE request to the encoded job endpoint', () => {
+    let completed = false;
+
+    service.removeInterest('job/1').subscribe(() => {
+      completed = true;
+    });
+
+    const request = http.expectOne(`${environment.baseUrl}/jobs/job%2F1/interest`);
+    expect(request.request.method).toBe('DELETE');
+    request.flush(null);
+
+    expect(completed).toBe(true);
   });
 });

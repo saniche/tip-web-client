@@ -1,0 +1,182 @@
+<section class="application-journal">
+  <header class="application-journal__header">
+    <div>
+      <p class="application-journal__kicker">Career tracking</p>
+      <h1>Application Journal</h1>
+      <p>Track your applications, follow-ups, and progress.</p>
+    </div>
+    <a class="btn btn-primary" routerLink="/applications/new">Add application</a>
+  </header>
+
+  <form
+    class="application-journal__filters row g-3"
+    aria-label="Filter application journal"
+    (submit)="applyFilters($event)"
+  >
+    <div class="col-12 col-md-4">
+      <label class="form-label" for="application-title-filter">Job title</label>
+      <input
+        class="form-control"
+        id="application-title-filter"
+        name="title"
+        type="search"
+        [value]="draftFilters().title ?? ''"
+        (input)="onFilterInput('title', $event)"
+      />
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label" for="application-company-filter">Company</label>
+      <input
+        class="form-control"
+        id="application-company-filter"
+        name="company"
+        type="search"
+        [value]="draftFilters().company ?? ''"
+        (input)="onFilterInput('company', $event)"
+      />
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label" for="application-location-filter">Location</label>
+      <input
+        class="form-control"
+        id="application-location-filter"
+        name="location"
+        type="search"
+        [value]="draftFilters().location ?? ''"
+        (input)="onFilterInput('location', $event)"
+      />
+    </div>
+    <div class="col-12 d-flex flex-wrap gap-2">
+      <button class="btn btn-primary" type="submit">Apply filters</button>
+      <button class="btn btn-outline-secondary" type="button" (click)="clearFilters()">
+        Clear filters
+      </button>
+    </div>
+  </form>
+
+  <section class="application-journal__pagination" aria-label="Pagination">
+    <div class="d-flex align-items-center gap-2">
+      <label class="form-label mb-0" for="application-page-size">Results per page</label>
+      <select
+        class="form-select application-journal__page-size"
+        id="application-page-size"
+        [value]="pageSize()"
+        (change)="onPageSizeChange($event)"
+      >
+        @for (size of pageSizeOptions(); track size) {
+          <option [value]="size">{{ size }}</option>
+        }
+      </select>
+    </div>
+    <div class="application-journal__pagination-navigation">
+      @if (page(); as currentPageResult) {
+        <span>
+          Page {{ currentPage() }} of {{ totalPages() }} · {{ currentPageResult.total }}
+          {{ currentPageResult.total === 1 ? 'application' : 'applications' }}
+        </span>
+      } @else {
+        <span>Page {{ currentPage() }}</span>
+      }
+      <div class="d-flex gap-2">
+        <button
+          class="btn btn-outline-secondary"
+          type="button"
+          [disabled]="state() !== 'results' || currentPage() <= 1"
+          (click)="previousPage()"
+        >
+          Previous
+        </button>
+        <button
+          class="btn btn-outline-secondary"
+          type="button"
+          [disabled]="state() !== 'results' || currentPage() >= totalPages()"
+          (click)="nextPage()"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  </section>
+
+  @if (state() === 'loading') {
+    <p class="application-journal__status" role="status">Loading your applications…</p>
+  } @else if (state() === 'error') {
+    <div class="application-journal__message" role="alert">
+      <p>{{ errorMessage() }}</p>
+      <button class="btn btn-primary" type="button" (click)="retry()">Retry</button>
+    </div>
+  } @else if (state() === 'empty') {
+    <div class="application-journal__message" role="status">
+      @if (hasActiveFilters()) {
+        <p>No applications match the current filters.</p>
+        <button class="btn btn-outline-secondary" type="button" (click)="clearFilters()">
+          Clear filters
+        </button>
+      } @else {
+        <p>You have not added any applications yet.</p>
+        <a class="btn btn-primary" routerLink="/applications/new">Add your first application</a>
+      }
+    </div>
+  } @else if (page(); as currentPage) {
+    <div class="application-journal__summary" aria-live="polite">
+      {{ currentPage.total }}
+      {{ currentPage.total === 1 ? 'application' : 'applications' }}
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <caption class="visually-hidden">
+          Your application journal
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Job title</th>
+            <th scope="col">Company</th>
+            <th scope="col">Location</th>
+            <th scope="col">Posting date</th>
+            <th scope="col">Application status</th>
+            <th scope="col">Recruiter</th>
+            <th scope="col">Contact date</th>
+            <th scope="col">Follow-up date</th>
+            <th scope="col">Posting</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (entry of entries(); track entry.id) {
+            <tr>
+              <td>
+                <a [routerLink]="['/applications', entry.id]">{{
+                  displayValue(entry.job.title)
+                }}</a>
+              </td>
+              <td>{{ displayValue(entry.job.company) }}</td>
+              <td>{{ displayValue(entry.job.location) }}</td>
+              <td>{{ formatDate(entry.job.postingDate) }}</td>
+              <td>{{ statusLabel(entry.status) }}</td>
+              <td>
+                @if (entry.recruiterName || entry.recruiterEmail) {
+                  <span>{{ displayValue(entry.recruiterName) }}</span>
+                  @if (entry.recruiterEmail) {
+                    <a class="d-block" [href]="'mailto:' + entry.recruiterEmail">
+                      {{ entry.recruiterEmail }}
+                    </a>
+                  }
+                } @else {
+                  —
+                }
+              </td>
+              <td>{{ formatDate(entry.contactDate) }}</td>
+              <td>{{ formatDate(entry.followUpDate) }}</td>
+              <td>
+                @if (originalPostingUrl(entry); as postingUrl) {
+                  <a [href]="postingUrl" target="_blank" rel="noopener noreferrer">Open posting</a>
+                } @else {
+                  {{ displayValue(entry.job.source) }}
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

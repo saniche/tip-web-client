@@ -1,0 +1,191 @@
+<section class="interests">
+  <header class="interests__header">
+    <p class="interests__kicker">Career tracking</p>
+    <h1>Job Interests</h1>
+    <p>Manage and track all the opportunities you have expressed interest in.</p>
+  </header>
+
+  <form
+    class="interests__filters row g-3"
+    aria-label="Filter job interests"
+    (submit)="applyFilters($event)"
+  >
+    <div class="col-12 col-md-4">
+      <label class="form-label" for="interest-title-filter">Job Title</label>
+      <input
+        class="form-control"
+        id="interest-title-filter"
+        name="title"
+        type="search"
+        [value]="draftFilters().title ?? ''"
+        (input)="onTitleInput($event)"
+      />
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label" for="interest-company-filter">Company</label>
+      <input
+        class="form-control"
+        id="interest-company-filter"
+        name="company"
+        type="search"
+        [value]="draftFilters().company ?? ''"
+        (input)="onCompanyInput($event)"
+      />
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label" for="interest-location-filter">Location</label>
+      <input
+        class="form-control"
+        id="interest-location-filter"
+        name="location"
+        type="search"
+        [value]="draftFilters().location ?? ''"
+        (input)="onLocationInput($event)"
+      />
+    </div>
+    <div class="col-12 d-flex flex-wrap gap-2">
+      <button class="btn btn-primary" type="submit">Apply filters</button>
+      <button class="btn btn-outline-secondary" type="button" (click)="clearFilters()">
+        Clear filters
+      </button>
+    </div>
+  </form>
+
+  <section class="interests__pagination" aria-label="Pagination">
+    <div class="interests__pagination-navigation">
+      @if (page(); as currentPageResult) {
+        <span
+          >Page {{ currentPage() }} of {{ totalPages() }} ·
+          {{ currentPageResult.total }} results</span
+        >
+      } @else {
+        <span>Page {{ currentPage() }}</span>
+      }
+      <div class="d-flex gap-2">
+        <button
+          class="btn btn-outline-secondary"
+          type="button"
+          [disabled]="state() !== 'results' || currentPage() <= 1"
+          (click)="previousPage()"
+        >
+          Previous
+        </button>
+        <button
+          class="btn btn-outline-secondary"
+          type="button"
+          [disabled]="state() !== 'results' || currentPage() >= totalPages()"
+          (click)="nextPage()"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  </section>
+
+  @if (removalError()) {
+    <div class="alert alert-danger" role="alert">
+      {{ removalError() }}
+    </div>
+  }
+
+  @if (state() === 'loading') {
+    <p class="interests__status" role="status">Loading interests…</p>
+  } @else if (state() === 'error') {
+    <div class="interests__message" role="alert">
+      <p>{{ errorMessage() }}</p>
+      <button class="btn btn-primary" type="button" (click)="retry()">Retry</button>
+    </div>
+  } @else if (state() === 'empty') {
+    <div class="interests__message" role="status">
+      @if (hasActiveFilters()) {
+        <p>No job interests match the current filter criteria.</p>
+        <button class="btn btn-outline-secondary" type="button" (click)="clearFilters()">
+          Clear filters
+        </button>
+      } @else {
+        <p>You have not added any job interests yet.</p>
+      }
+    </div>
+  } @else if (page(); as currentPage) {
+    <div class="interests__summary visually-hidden" aria-live="polite">
+      {{ currentPage.total }} {{ currentPage.total === 1 ? 'interest' : 'interests' }}
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <caption class="visually-hidden">
+          Personal job interests
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Job Title</th>
+            <th scope="col">Company</th>
+            <th scope="col">Location</th>
+            <th scope="col">Posting Date</th>
+            <th scope="col">Interest Date</th>
+            <th scope="col">Source</th>
+            <th scope="col" class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (interest of interests(); track interest.id) {
+            <tr>
+              <td>
+                <a [routerLink]="['/normalized-jobs', interest.job.id]">{{
+                  displayValue(interest.job.title)
+                }}</a>
+              </td>
+              <td>{{ displayValue(interest.job.company) }}</td>
+              <td>{{ displayValue(interest.job.location) }}</td>
+              <td>{{ displayValue(interest.job.postingDate) }}</td>
+              <td>{{ displayValue(interest.createdAt) }}</td>
+              <td>
+                @if (interest.job.source) {
+                  <a
+                    [href]="interest.job.source"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >{{ formatSource(interest.job.source) }}</a
+                  >
+                } @else {
+                  —
+                }
+              </td>
+              <td class="text-end">
+                @if (pendingRemovalId() === interest.id) {
+                  <span class="spinner-border spinner-border-sm text-secondary" role="status" aria-hidden="true"></span>
+                  <span class="visually-hidden">Removing…</span>
+                } @else if (confirmingRemovalId() === interest.id) {
+                  <div class="d-inline-flex gap-1 align-items-center">
+                    <button
+                      class="btn btn-sm btn-danger"
+                      type="button"
+                      (click)="confirmRemoval(interest)"
+                    >
+                      Confirm
+                    </button>
+                    <button
+                      class="btn btn-sm btn-outline-secondary"
+                      type="button"
+                      (click)="cancelRemoval()"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                } @else {
+                  <button
+                    class="btn btn-sm btn-outline-danger"
+                    type="button"
+                    [disabled]="pendingRemovalId() !== null"
+                    (click)="startRemoval(interest.id)"
+                  >
+                    Remove
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

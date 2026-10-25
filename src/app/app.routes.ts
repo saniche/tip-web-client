@@ -4,6 +4,7 @@ import { Register } from './pages/auth/register/register';
 import { Dashboard } from './pages/dashboard/dashboard';
 import { Jobs } from './pages/jobs/jobs';
 import { ProfileComponent } from './pages/profile/profile.component';
+import { authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   {
@@ -26,6 +27,35 @@ export const routes: Routes = [
   {
     path: 'jobs',
     component: Jobs,
+  },
+  {
+    path: 'jobs/interests',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/interests/interests').then((page) => page.Interests),
+  },
+  {
+    path: 'applications/new',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/application-journal/application-journal-entry').then(
+        (page) => page.ApplicationJournalEntry,
+      ),
+  },
+  {
+    path: 'applications/:id',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/application-journal/application-journal-entry').then(
+        (page) => page.ApplicationJournalEntry,
+      ),
+  },
+  {
+    path: 'applications',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/application-journal/application-journal').then(
+        (page) => page.ApplicationJournal,
+      ),
   },
   {
     path: 'normalize-job',

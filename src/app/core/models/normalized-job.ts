@@ -52,6 +52,8 @@ export interface NormalizedJobDetail {
   submitterId: string | null;
   createdAt: string | null;
   hasWriteAccess: boolean;
+  isInterested: boolean | null;
+  isApplied: boolean | null;
 }
 
 export interface NormalizedJobHeaderUpdate {
