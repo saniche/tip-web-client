@@ -75,6 +75,30 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'matching-session',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/matching-session/matching-session').then(
+        (page) => page.MatchingSessionPage,
+      ),
+  },
+  {
+    path: 'matching-reports',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/matching-reports/matching-reports').then(
+        (page) => page.MatchingReportsPage,
+      ),
+  },
+  {
+    path: 'matching-reports/:id',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/matching-reports/matching-report-detail').then(
+        (page) => page.MatchingReportDetailPage,
+      ),
+  },
+  {
     path: 'profile',
     component: ProfileComponent,
   },

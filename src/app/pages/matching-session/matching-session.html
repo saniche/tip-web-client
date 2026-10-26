@@ -1,0 +1,256 @@
+<section class="matching-session">
+  <header class="matching-session__header">
+    <p class="matching-session__kicker">Matching workflow</p>
+    <h1>Matching session</h1>
+    <p>Review the jobs you want to evaluate against your profile.</p>
+  </header>
+
+  @if (store.storageError(); as storageError) {
+    <div class="alert alert-warning" role="alert">{{ storageError }}</div>
+  }
+
+  @if (store.summary(); as summary) {
+    <section class="matching-session__outcome" aria-live="polite">
+      <h2>Matching {{ summary.processStatus }}</h2>
+      @if (summary.processStatus === 'done') {
+        <p>Matching completed.</p>
+        @if (summary.reportLoadState === 'loaded' && summary.report; as report) {
+          <p>{{ report.results.length }} results are available.</p>
+          @if (report.results.length > 0) {
+            <ul aria-label="Per-job scoring outcomes">
+              @for (
+                result of orderedReportResults(report.results);
+                track result.id ?? result.jobId ?? $index
+              ) {
+                <li>
+                  Job {{ result.jobId ?? 'identifier unavailable' }}:
+                  {{ result.score === null ? 'Not scored' : result.score }}
+                  @if (result.scoringStatus) {
+                    · scoring status {{ result.scoringStatus }}
+                  }
+                  @if (result.rank !== null) {
+                    · rank {{ result.rank }}
+                  }
+                </li>
+              }
+            </ul>
+          }
+          <a class="btn btn-primary" [routerLink]="['/matching-reports', report.id]">
+            View report
+          </a>
+        } @else if (summary.reportLoadState === 'failed') {
+          <p role="alert">
+            Matching completed, but its report could not be loaded. {{ summary.error }}
+          </p>
+          <button class="btn btn-outline-primary" type="button" (click)="store.retryReportLoad()">
+            Retry report loading
+          </button>
+        } @else if (summary.reportLoadState === 'unavailable') {
+          <p>The process completed, but no report identifier was returned.</p>
+        } @else if (summary.reportLoadState === 'loading') {
+          <p role="status">Loading the matching report…</p>
+        }
+      } @else {
+        <p>The matching process failed. Review the selected jobs before starting a retry.</p>
+        @if (summary.error) {
+          <p role="alert">{{ summary.error }}</p>
+        }
+      }
+      @if (summary.retryNotice; as retryNotice) {
+        <p class="alert alert-warning" role="status">{{ retryNotice }}</p>
+      }
+      @if (summary.retryableJobs.length > 0) {
+        <button
+          class="btn btn-primary"
+          type="button"
+          data-testid="retry-selection"
+          (click)="startRetrySession()"
+        >
+          Review retry selection
+        </button>
+      }
+      @if (summary.notSubmittedJobs.length > 0) {
+        <ul aria-label="Jobs not submitted">
+          @for (job of summary.notSubmittedJobs; track job.jobId) {
+            <li>{{ job.jobId }}: {{ job.reason }}</li>
+          }
+        </ul>
+      }
+      <button class="btn btn-outline-secondary" type="button" (click)="store.dismissSummary()">
+        Dismiss summary
+      </button>
+    </section>
+  } @else if (session(); as activeSession) {
+    <section aria-labelledby="matching-review-title">
+      <div class="matching-session__summary">
+        <h2 id="matching-review-title">{{ selectedCount() }} jobs selected</h2>
+        <p>
+          {{ interestAddCount() }}
+          {{ interestAddCount() === 1 ? 'job is' : 'jobs are' }}
+          confirmed as needing an interest addition. Unknown membership will be checked before
+          submission.
+        </p>
+        @if (store.membershipCheckError(); as membershipCheckError) {
+          <p class="alert alert-warning" role="alert">{{ membershipCheckError }}</p>
+        }
+      </div>
+
+      @if (selectedJobs().length === 0) {
+        <div class="matching-session__empty" role="status">
+          <p>Your session is empty. Add jobs from Normalized Jobs or My Interests.</p>
+          <a class="btn btn-outline-primary" routerLink="/normalized-jobs"
+            >Browse normalized jobs</a
+          >
+          <a class="btn btn-outline-secondary" routerLink="/jobs/interests">Browse interests</a>
+        </div>
+      } @else {
+        <div class="table-responsive">
+          <table class="table align-middle">
+            <caption class="visually-hidden">
+              Jobs selected for matching
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Job</th>
+                <th scope="col">Source</th>
+                <th scope="col">Interest membership</th>
+                <th scope="col" class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (job of selectedJobs(); track job.jobId) {
+                <tr>
+                  <td>
+                    <strong>{{ displayValue(job.title) }}</strong>
+                    <div>{{ displayValue(job.company) }} · {{ displayValue(job.location) }}</div>
+                    <small>Job ID: {{ job.jobId }}</small>
+                  </td>
+                  <td>{{ entrySourceLabel(job) }}</td>
+                  <td>{{ interestLabel(job) }}</td>
+                  <td class="text-end">
+                    @if (activeSession.state === 'open') {
+                      <button
+                        class="btn btn-sm btn-outline-danger"
+                        type="button"
+                        [attr.data-testid]="'remove-' + job.jobId"
+                        (click)="removeJob(job.jobId)"
+                      >
+                        Remove
+                      </button>
+                    } @else {
+                      <span>Session locked</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <section class="matching-session__profile" aria-label="Profile availability">
+        @if (profileAvailability() === 'loading') {
+          <p role="status">Checking profile availability…</p>
+        } @else if (profileAvailability() === 'available') {
+          <p>Your profile is available. Matching will validate profile readiness.</p>
+        } @else if (profileAvailability() === 'missing') {
+          <div class="alert alert-warning" role="alert">
+            <p>No profile was found. Create a profile before starting matching.</p>
+            <a class="btn btn-primary" routerLink="/profile">Go to profile</a>
+          </div>
+        } @else {
+          <div class="alert alert-danger" role="alert">
+            <p>{{ profileError() }}</p>
+            <button class="btn btn-outline-danger" type="button" (click)="retryProfileCheck()">
+              Retry profile check
+            </button>
+          </div>
+        }
+      </section>
+
+      @if (confirmationMessage()) {
+        <p class="alert alert-info" role="status">{{ confirmationMessage() }}</p>
+      }
+      @if (activeSession.state === 'submitting') {
+        <p role="status">Preparing matching and synchronizing job interests…</p>
+      } @else if (activeSession.state === 'processing') {
+        <p role="status">
+          Last recognized process status:
+          {{ activeSession.lastConfirmedStatus ?? 'Not yet confirmed' }}.
+        </p>
+        @if (activeSession.unrecognizedStatus; as unrecognizedStatus) {
+          <p class="alert alert-warning" role="alert">
+            Unrecognized process status: {{ unrecognizedStatus }}. It is not treated as success or
+            failure.
+          </p>
+        }
+        @if (store.trackingWarning(); as trackingWarning) {
+          <p class="alert alert-warning" role="alert">{{ trackingWarning }}</p>
+          <button
+            class="btn btn-outline-primary"
+            type="button"
+            data-testid="retry-status"
+            (click)="retryProcessing()"
+          >
+            Retry status check
+          </button>
+        }
+        @if (activeSession.processingError) {
+          <p class="alert alert-warning" role="alert">{{ activeSession.processingError }}</p>
+        }
+      } @else if (activeSession.processingError) {
+        <p class="alert alert-danger" role="alert">{{ activeSession.processingError }}</p>
+      }
+
+      <div class="matching-session__actions">
+        <button
+          class="btn btn-primary"
+          type="button"
+          data-testid="confirm-matching"
+          [disabled]="!canConfirm()"
+          (click)="beginConfirmation()"
+        >
+          Confirm and start matching
+        </button>
+        @if (activeSession.state === 'open') {
+          <button
+            class="btn btn-outline-danger"
+            type="button"
+            data-testid="request-discard"
+            (click)="requestDiscard()"
+          >
+            Discard session
+          </button>
+        }
+      </div>
+
+      @if (store.discardConfirmationRequested()) {
+        <div class="alert alert-warning" role="alert">
+          <p>Discard this matching session?</p>
+          <button
+            class="btn btn-danger"
+            type="button"
+            data-testid="confirm-discard"
+            (click)="confirmDiscard()"
+          >
+            Discard
+          </button>
+          <button
+            class="btn btn-outline-secondary"
+            type="button"
+            data-testid="cancel-discard"
+            (click)="cancelDiscard()"
+          >
+            Keep session
+          </button>
+        </div>
+      }
+    </section>
+  } @else {
+    <div class="matching-session__empty" role="status">
+      <p>No active matching session. Add jobs from either source to begin.</p>
+      <a class="btn btn-outline-primary" routerLink="/normalized-jobs">Browse normalized jobs</a>
+      <a class="btn btn-outline-secondary" routerLink="/jobs/interests">Browse interests</a>
+    </div>
+  }
+</section>

@@ -4,6 +4,7 @@ import { ActivatedRoute, ParamMap, Params, Router, RouterLink } from '@angular/r
 import { EMPTY, Subject, catchError, combineLatest, debounceTime, startWith, switchMap, tap } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
 import { TipApi } from '../../core/api/tip-api';
+import { MatchingStore } from '../../core/state/matching-store';
 import {
   JobInterest,
   JobInterestFilters,
@@ -68,6 +69,7 @@ export class Interests {
   private readonly destroyRef = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  protected readonly matchingStore = inject(MatchingStore);
 
   private readonly retryRequests = new Subject<void>();
   private readonly filterInputSubject = new Subject<{ key: keyof JobInterestFilters; value: string }>();
@@ -217,6 +219,21 @@ export class Interests {
 
   protected retry(): void {
     this.retryRequests.next();
+  }
+
+  protected addToMatchingSession(interest: JobInterest): void {
+    const added = this.matchingStore.addJob({
+      jobId: interest.job.id,
+      title: interest.job.title,
+      company: interest.job.company,
+      location: interest.job.location,
+      source: interest.job.source,
+      entrySource: 'my-interests',
+      interestState: 'known-in-interest',
+    });
+    if (added) {
+      void this.router.navigate(['/matching-session']);
+    }
   }
 
   protected startRemoval(interestId: string): void {

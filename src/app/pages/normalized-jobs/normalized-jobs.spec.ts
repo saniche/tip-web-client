@@ -4,6 +4,7 @@ import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TipApi } from '../../core/api/tip-api';
 import { NormalizedJob, NormalizedJobsPage } from '../../core/models/normalized-job';
+import { MatchingStore, MATCHING_SESSION_STORAGE_KEY } from '../../core/state/matching-store';
 import { NormalizedJobs } from './normalized-jobs';
 
 const jobs: NormalizedJob[] = [
@@ -36,9 +37,11 @@ describe('NormalizedJobs', () => {
   let fixture: ComponentFixture<NormalizedJobs>;
   let api: { listNormalizedJobs: ReturnType<typeof vi.fn> };
   let router: { navigate: ReturnType<typeof vi.fn> };
+  let matchingStore: MatchingStore;
   let queryParams: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
 
   beforeEach(async () => {
+    sessionStorage.removeItem(MATCHING_SESSION_STORAGE_KEY);
     api = { listNormalizedJobs: vi.fn(() => of(jobsPage)) };
     router = { navigate: vi.fn().mockResolvedValue(true) };
     queryParams = new BehaviorSubject(convertToParamMap({}));
@@ -59,6 +62,7 @@ describe('NormalizedJobs', () => {
         { provide: Router, useValue: router },
       ],
     }).compileComponents();
+    matchingStore = TestBed.inject(MatchingStore);
   });
 
   afterEach(() => {
@@ -86,6 +90,29 @@ describe('NormalizedJobs', () => {
 
     const link = root().querySelector<HTMLAnchorElement>('[data-testid="normalize-link"]');
     expect(link).toBeTruthy();
+  });
+
+  it('adds a selected normalized job to a matching session without an API call', () => {
+    render();
+
+    const button = root().querySelector<HTMLButtonElement>(
+      '[data-testid="add-to-matching-job-1"]',
+    );
+    button?.click();
+
+    expect(matchingStore.session()?.selectedJobs).toEqual([
+      {
+        jobId: 'job-1',
+        title: 'Senior Engineer',
+        company: 'Northwind',
+        location: 'Remote',
+        source: 'Acme',
+        entrySources: ['normalized-jobs'],
+        interestState: 'unknown',
+      },
+    ]);
+    expect(api.listNormalizedJobs).toHaveBeenCalledTimes(1);
+    expect(router.navigate).toHaveBeenCalledWith(['/matching-session']);
   });
 
   it('loads the default page and renders each job field in service order', () => {

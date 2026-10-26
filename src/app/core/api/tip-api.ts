@@ -37,6 +37,14 @@ import {
   RegisterTokenResponse,
 } from '../models/auth.models';
 import { ProfileSession, UserProfile } from '../models/profile.models';
+import {
+  MatchingProcess,
+  MatchingReport,
+  MatchingReportSummary,
+  mapMatchingProcessResponse,
+  mapMatchingReportResponse,
+  mapMatchingReportSummaries,
+} from '../models/matching';
 
 @Injectable({ providedIn: 'root' })
 export class TipApi {
@@ -111,6 +119,36 @@ export class TipApi {
         `${this.baseUrl}/processing-jobs/${encodeURIComponent(processingJobId)}`,
       )
       .pipe(map(mapProcessingJob));
+  }
+
+  submitMatching(jobIds: string[]): Observable<MatchingProcess> {
+    return this.http
+      .post<unknown>(`${this.baseUrl}/matching/`, { job_ids: jobIds })
+      .pipe(map(mapMatchingProcessResponse));
+  }
+
+  getMatchingProcess(processingId: string): Observable<MatchingProcess> {
+    return this.http
+      .get<unknown>(`${this.baseUrl}/processing-jobs/${encodeURIComponent(processingId)}`)
+      .pipe(map(mapMatchingProcessResponse));
+  }
+
+  listMatchingReports(): Observable<MatchingReportSummary[]> {
+    return this.http
+      .get<unknown>(`${this.baseUrl}/matching/reports`)
+      .pipe(map(mapMatchingReportSummaries));
+  }
+
+  getMatchingReport(reportId: string): Observable<MatchingReport> {
+    return this.http
+      .get<unknown>(`${this.baseUrl}/matching/reports/${encodeURIComponent(reportId)}`)
+      .pipe(map(mapMatchingReportResponse));
+  }
+
+  deleteMatchingReport(reportId: string): Observable<void> {
+    return this.http.delete<void>(
+      `${this.baseUrl}/matching/reports/${encodeURIComponent(reportId)}`,
+    );
   }
 
   getProfile(): Observable<UserProfile> {

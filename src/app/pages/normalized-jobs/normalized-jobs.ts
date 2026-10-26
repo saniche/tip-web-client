@@ -4,6 +4,7 @@ import { ActivatedRoute, ParamMap, Params, Router, RouterLink } from '@angular/r
 import { EMPTY, Subject, catchError, combineLatest, startWith, switchMap, tap } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
 import { TipApi } from '../../core/api/tip-api';
+import { MatchingStore } from '../../core/state/matching-store';
 import {
   NormalizedJob,
   NormalizedJobFilters,
@@ -108,6 +109,7 @@ export class NormalizedJobs {
   private readonly destroyRef = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  protected readonly matchingStore = inject(MatchingStore);
   private readonly retryRequests = new Subject<void>();
 
   protected readonly state = signal<ListingState>('loading');
@@ -205,6 +207,21 @@ export class NormalizedJobs {
 
   protected retry(): void {
     this.retryRequests.next();
+  }
+
+  protected addToMatchingSession(job: NormalizedJob): void {
+    const added = this.matchingStore.addJob({
+      jobId: job.id,
+      title: job.title,
+      company: job.company,
+      location: job.location,
+      source: job.source,
+      entrySource: 'normalized-jobs',
+      interestState: 'unknown',
+    });
+    if (added) {
+      void this.router.navigate(['/matching-session']);
+    }
   }
 
   protected updateDraftFilter(field: keyof NormalizedJobFilters, event: Event): void {

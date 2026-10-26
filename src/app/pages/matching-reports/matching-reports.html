@@ -1,0 +1,51 @@
+<section class="matching-reports">
+  <header class="matching-reports__header">
+    <p class="matching-reports__kicker">Matching</p>
+    <h1>Matching reports</h1>
+    <p>Review reports from completed matching runs.</p>
+  </header>
+
+  @if (state() === 'loading') {
+    <p role="status">Loading matching reports…</p>
+  } @else if (state() === 'error') {
+    <div class="alert alert-danger" role="alert">
+      <p>{{ errorMessage() }}</p>
+      <button class="btn btn-primary" type="button" data-testid="retry-reports" (click)="retry()">
+        Retry
+      </button>
+    </div>
+  } @else if (state() === 'empty') {
+    <div class="matching-reports__empty" role="status">
+      <p>No matching reports yet.</p>
+      <a class="btn btn-outline-primary" routerLink="/matching-session">Open matching session</a>
+    </div>
+  } @else {
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <caption class="visually-hidden">
+          Matching report history
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Report</th>
+            <th scope="col">Created</th>
+            <th scope="col">Status</th>
+            <th scope="col">Profile version</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (report of reports(); track report.id) {
+            <tr>
+              <td>
+                <a [routerLink]="['/matching-reports', report.id]">{{ report.id }}</a>
+              </td>
+              <td>{{ displayValue(report.createdAt) }}</td>
+              <td>{{ report.status }}</td>
+              <td>{{ displayValue(report.profileId) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

@@ -151,6 +151,16 @@
                 }
               </td>
               <td class="text-end">
+                <div class="d-inline-flex flex-wrap justify-content-end gap-1">
+                  <button
+                    class="btn btn-sm btn-outline-primary"
+                    type="button"
+                    [disabled]="matchingStore.isLocked()"
+                    [attr.data-testid]="'add-to-matching-' + interest.id"
+                    (click)="addToMatchingSession(interest)"
+                  >
+                    Add to session
+                  </button>
                 @if (pendingRemovalId() === interest.id) {
                   <span class="spinner-border spinner-border-sm text-secondary" role="status" aria-hidden="true"></span>
                   <span class="visually-hidden">Removing…</span>
@@ -181,6 +191,7 @@
                     Remove
                   </button>
                 }
+                </div>
               </td>
             </tr>
           }

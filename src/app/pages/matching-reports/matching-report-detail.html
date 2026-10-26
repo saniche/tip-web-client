@@ -1,0 +1,138 @@
+<section class="matching-report-detail">
+  <header class="matching-report-detail__header">
+    <p class="matching-report-detail__kicker">Matching report</p>
+    <h1>Report details</h1>
+    <a routerLink="/matching-reports">Back to reports</a>
+  </header>
+
+  @if (state() === 'loading') {
+    <p role="status">Loading report…</p>
+  } @else if (state() === 'error') {
+    <div class="alert alert-danger" role="alert">
+      <p>{{ errorMessage() }}</p>
+      <button class="btn btn-primary" type="button" data-testid="retry-report" (click)="retry()">
+        Retry
+      </button>
+    </div>
+  } @else if (report(); as currentReport) {
+    <section class="matching-report-detail__metadata" aria-label="Report metadata">
+      <p>Report ID: {{ currentReport.id }}</p>
+      <p>Status: {{ currentReport.status }}</p>
+      <p>Report profile ID: {{ displayValue(currentReport.profileId ?? null) }}</p>
+      <p>{{ profileComparison() }}</p>
+      @if (profileComparisonUnavailable()) {
+        <p>Current profile metadata could not be retrieved.</p>
+      }
+    </section>
+
+    @if (activeReport()) {
+      <p class="alert alert-warning" role="alert">
+        This report is associated with an active matching process; deletion is unavailable.
+      </p>
+    } @else {
+      <p class="alert alert-info" role="status">
+        Deletion is unavailable until report terminal statuses are verified.
+      </p>
+    }
+    <button
+      class="btn btn-outline-danger"
+      type="button"
+      data-testid="delete-report"
+      disabled
+      [attr.aria-label]="'Delete report ' + currentReport.id"
+    >
+      Delete report
+    </button>
+
+    @if (results().length === 0) {
+      <div class="matching-report-detail__empty" role="status">
+        <p>This report has no results.</p>
+      </div>
+    } @else {
+      <section aria-labelledby="report-results-title">
+        <h2 id="report-results-title">Results</h2>
+        @for (item of results(); track item.result.id ?? item.result.jobId ?? $index) {
+          <article class="matching-report-detail__result card mb-3" data-testid="matching-result">
+            <div class="card-body">
+              <h3 class="h5">
+                {{ displayValue(item.title ?? item.result.jobId) }}
+                @if (item.company) {
+                  <span>· {{ item.company }}</span>
+                }
+              </h3>
+              <p>Job ID: {{ displayValue(item.result.jobId) }}</p>
+              @if (item.jobDetailsUnavailable) {
+                <p class="text-warning">Job details unavailable; showing the job identifier.</p>
+              }
+              <p>
+                Score:
+                @if (item.result.score === null) {
+                  <strong>Not scored</strong>
+                } @else {
+                  <strong>{{ item.result.score }}</strong>
+                }
+              </p>
+              @if (item.result.rank !== null) {
+                <p>Report rank: {{ item.result.rank }}</p>
+              }
+              @if (item.result.eligible === null) {
+                <p>System eligibility: Not provided</p>
+              } @else {
+                <p>System eligibility: {{ item.result.eligible ? 'Eligible' : 'Not eligible' }}</p>
+              }
+              @if (item.result.scoringStatus) {
+                <p>Scoring status: {{ item.result.scoringStatus }}</p>
+              }
+
+              @if (classifyExplanation(item.result.explanation); as explanationView) {
+                @if (explanationView.kind === 'current') {
+                  <section class="matching-report-detail__explanation">
+                    <h4>Requirements</h4>
+                    @if (explanationView.value.requirements.length === 0) {
+                      <p>No requirements were supplied.</p>
+                    } @else {
+                      <ul>
+                        @for (criterion of explanationView.value.requirements; track $index) {
+                          <li>
+                            <strong>{{ criterion.criterion }} — {{ criterion.judgment }}</strong>
+                            <span>{{ criterion.evidence }}</span>
+                          </li>
+                        }
+                      </ul>
+                    }
+                    <h4>Desirables</h4>
+                    @if (explanationView.value.desirables.length === 0) {
+                      <p>No desirables were supplied.</p>
+                    } @else {
+                      <ul>
+                        @for (criterion of explanationView.value.desirables; track $index) {
+                          <li>
+                            <strong>{{ criterion.criterion }} — {{ criterion.judgment }}</strong>
+                            <span>{{ criterion.evidence }}</span>
+                          </li>
+                        }
+                      </ul>
+                    }
+                    @if (explanationView.value.notes) {
+                      <h4>Notes</h4>
+                      <p>{{ explanationView.value.notes }}</p>
+                    }
+                    <h4>Analysis</h4>
+                    <p>Eligibility analysis: {{ explanationView.value.analysis.eligibility }}</p>
+                    <p>Matching analysis: {{ explanationView.value.analysis.matching }}</p>
+                    <p>Chance of success: {{ explanationView.value.analysis.chance_of_success }}</p>
+                  </section>
+                } @else {
+                  <section class="matching-report-detail__legacy">
+                    <h4>Legacy explanation format</h4>
+                    <pre>{{ formatLegacyExplanation(explanationView.value) }}</pre>
+                  </section>
+                }
+              }
+            </div>
+          </article>
+        }
+      </section>
+    }
+  }
+</section>

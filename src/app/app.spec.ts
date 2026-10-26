@@ -27,5 +27,7 @@ describe('App', () => {
     expect(compiled.textContent).toContain('Dashboard');
     expect(compiled.textContent).toContain('Auth');
     expect(compiled.textContent).toContain('Jobs');
+    expect(compiled.textContent).toContain('Matching session');
+    expect(compiled.textContent).toContain('Matching reports');
   });
 });

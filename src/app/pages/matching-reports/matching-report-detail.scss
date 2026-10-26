@@ -1,0 +1,36 @@
+.matching-report-detail {
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: 2rem 0 3rem;
+}
+
+.matching-report-detail__header {
+  margin-bottom: 2rem;
+}
+
+.matching-report-detail__kicker {
+  margin-bottom: 0.35rem;
+  color: var(--bs-primary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.matching-report-detail__metadata {
+  margin-bottom: 1.5rem;
+}
+
+.matching-report-detail__result pre {
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.matching-report-detail__explanation li {
+  margin-bottom: 0.5rem;
+}
+
+.matching-report-detail__explanation li span {
+  display: block;
+}

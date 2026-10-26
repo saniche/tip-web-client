@@ -1,0 +1,30 @@
+.matching-session {
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: 2rem 0 3rem;
+}
+
+.matching-session__header {
+  margin-bottom: 2rem;
+}
+
+.matching-session__kicker {
+  margin-bottom: 0.35rem;
+  color: var(--bs-primary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.matching-session__summary,
+.matching-session__profile,
+.matching-session__empty {
+  margin-bottom: 1.5rem;
+}
+
+.matching-session__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}

@@ -5,6 +5,7 @@ import { BehaviorSubject, Observable, of, Subject, Subscriber, throwError } from
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TipApi } from '../../core/api/tip-api';
 import { JobInterest, JobInterestsPage } from '../../core/models/interest';
+import { MatchingStore, MATCHING_SESSION_STORAGE_KEY } from '../../core/state/matching-store';
 import { Interests } from './interests';
 
 const mockInterests: JobInterest[] = [
@@ -49,9 +50,11 @@ describe('Interests Component', () => {
     removeInterest: ReturnType<typeof vi.fn>;
   };
   let router: Router;
+  let matchingStore: MatchingStore;
   let queryParams: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
 
   beforeEach(async () => {
+    sessionStorage.removeItem(MATCHING_SESSION_STORAGE_KEY);
     api = {
       listInterests: vi.fn(() => of(mockPage)),
       removeInterest: vi.fn(() => of(undefined)),
@@ -75,6 +78,7 @@ describe('Interests Component', () => {
 
     router = TestBed.inject(Router);
     vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    matchingStore = TestBed.inject(MatchingStore);
   });
 
   afterEach(() => {
@@ -98,6 +102,30 @@ describe('Interests Component', () => {
 
     const titleLink = compiled.querySelector('a[href="/normalized-jobs/job-1"]');
     expect(titleLink).toBeTruthy();
+  });
+
+  it('adds an existing interest to a matching session without changing interest membership', () => {
+    render();
+
+    const button = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
+      '[data-testid="add-to-matching-int-1"]',
+    );
+    button?.click();
+
+    expect(matchingStore.session()?.selectedJobs).toEqual([
+      {
+        jobId: 'job-1',
+        title: 'Senior Frontend Developer',
+        company: 'TechCorp',
+        location: 'Remote',
+        source: 'https://example.com/job-1',
+        entrySources: ['my-interests'],
+        interestState: 'known-in-interest',
+      },
+    ]);
+    expect(api.listInterests).toHaveBeenCalledTimes(1);
+    expect(api.removeInterest).not.toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/matching-session']);
   });
 
   it('shows empty state when no interests are returned', () => {

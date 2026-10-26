@@ -165,6 +165,7 @@
             <th scope="col">Location</th>
             <th scope="col">Posting date</th>
             <th scope="col">Source</th>
+            <th scope="col" class="text-end">Matching session</th>
           </tr>
         </thead>
         <tbody>
@@ -177,6 +178,17 @@
               <td>{{ displayValue(job.location) }}</td>
               <td>{{ displayValue(job.postingDate) }}</td>
               <td>{{ displayValue(job.source) }}</td>
+              <td class="text-end">
+                <button
+                  class="btn btn-sm btn-outline-primary"
+                  type="button"
+                  [disabled]="matchingStore.isLocked()"
+                  [attr.data-testid]="'add-to-matching-' + job.id"
+                  (click)="addToMatchingSession(job)"
+                >
+                  Add to session
+                </button>
+              </td>
             </tr>
           }
         </tbody>
