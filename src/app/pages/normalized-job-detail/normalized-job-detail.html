@@ -17,46 +17,60 @@
         <h1>{{ displayValue(job.title) }}</h1>
         <div class="row">
           <div class="col-md-6">
-        <p
-          class="normalized-job-detail__job-status"
-          [class]="'normalized-job-detail__job-status normalized-job-detail__job-status--' + statusClass(job.status)"
-        >
-          Status: <strong>{{ statusLabel(job.status) }}</strong>
-        </p>
+            <p
+              class="normalized-job-detail__job-status"
+              [class]="
+                'normalized-job-detail__job-status normalized-job-detail__job-status--' +
+                statusClass(job.status)
+              "
+            >
+              Status: <strong>{{ statusLabel(job.status) }}</strong>
+            </p>
           </div>
-        @if(isApplied()) {
-          <div class="col-md-6 ">
-            <span class="badge text-bg-success">Tracked in application journal</span>
-      </div>
-    }
+          @if (isApplied()) {
+            <div class="col-md-6">
+              <span class="badge text-bg-success">Tracked in application journal</span>
+            </div>
+          }
         </div>
-
       </div>
       <div class="normalized-job-detail__actions">
-         @if(!isApplied()) {
+        @if (!isApplied()) {
           <button class="btn btn-outline-warning" type="button" disabled>
             Apply (Feature not yet available)
           </button>
 
           @if (interestLoading()) {
-          <button class="btn btn-outline-secondary" type="button" disabled>
-            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-            Updating interest…
-          </button>
+            <button class="btn btn-outline-secondary" type="button" disabled>
+              <span
+                class="spinner-border spinner-border-sm"
+                role="status"
+                aria-hidden="true"
+              ></span>
+              Updating interest…
+            </button>
           } @else if (isInterested() === null) {
-          <button class="btn btn-outline-secondary" type="button" disabled>
-            Interest status unavailable
-          </button>
+            <button class="btn btn-outline-secondary" type="button" disabled>
+              Interest status unavailable
+            </button>
           } @else if (isInterested()) {
-          <button class="btn btn-outline-danger" type="button" (click)="toggleInterest()"
-            [disabled]="state() === 'deleting' || state() === 'saving'">
-            Remove from interests
-          </button>
+            <button
+              class="btn btn-outline-danger"
+              type="button"
+              (click)="toggleInterest()"
+              [disabled]="state() === 'deleting' || state() === 'saving'"
+            >
+              Remove from interests
+            </button>
           } @else {
-          <button class="btn btn-outline-success" type="button" (click)="toggleInterest()"
-            [disabled]="state() === 'deleting' || state() === 'saving'">
-            Add to interests
-          </button>
+            <button
+              class="btn btn-outline-success"
+              type="button"
+              (click)="toggleInterest()"
+              [disabled]="state() === 'deleting' || state() === 'saving'"
+            >
+              Add to interests
+            </button>
           }
         }
 
@@ -118,22 +132,45 @@
       </form>
     } @else {
       <dl class="normalized-job-detail__summary row g-3">
-        <div class="col-12 col-md-6"><dt>Company</dt><dd>{{ displayValue(job.company) }}</dd></div>
-        <div class="col-12 col-md-6"><dt>Location</dt><dd>{{ displayValue(job.location) }}</dd></div>
-        <div class="col-12 col-md-6"><dt>Salary</dt><dd>{{ displayValue(job.salary) }}</dd></div>
+        <div class="col-12 col-md-6">
+          <dt>Company</dt>
+          <dd>{{ displayValue(job.company) }}</dd>
+        </div>
+        <div class="col-12 col-md-6">
+          <dt>Location</dt>
+          <dd>{{ displayValue(job.location) }}</dd>
+        </div>
+        <div class="col-12 col-md-6">
+          <dt>Salary</dt>
+          <dd>{{ displayValue(job.salary) }}</dd>
+        </div>
         <div class="col-12 col-md-6">
           <dt>Source</dt>
           <dd>
             {{ displayValue(job.source) }}
             @if (job.url && !isEmailSource(job.source)) {
-              <a class="ms-2" [href]="job.url" target="_blank" rel="noopener noreferrer">Open source</a>
+              <a class="ms-2" [href]="job.url" target="_blank" rel="noopener noreferrer"
+                >Open source</a
+              >
             }
           </dd>
         </div>
-        <div class="col-12 col-md-6"><dt>Posting date</dt><dd>{{ displayValue(job.postingDate) }}</dd></div>
-        <div class="col-12 col-md-6"><dt>Created at</dt><dd>{{ displayValue(job.createdAt) }}</dd></div>
-        <div class="col-12 col-md-6"><dt>Submitter</dt><dd>{{ displayValue(job.submitterId) }}</dd></div>
-        <div class="col-12 col-md-6"><dt>Job ID</dt><dd>{{ displayValue(job.id) }}</dd></div>
+        <div class="col-12 col-md-6">
+          <dt>Posting date</dt>
+          <dd>{{ displayValue(job.postingDate) }}</dd>
+        </div>
+        <div class="col-12 col-md-6">
+          <dt>Created at</dt>
+          <dd>{{ displayValue(job.createdAt) }}</dd>
+        </div>
+        <div class="col-12 col-md-6">
+          <dt>Submitter</dt>
+          <dd>{{ displayValue(job.submitterId) }}</dd>
+        </div>
+        <div class="col-12 col-md-6">
+          <dt>Job ID</dt>
+          <dd>{{ displayValue(job.id) }}</dd>
+        </div>
       </dl>
 
       <div class="normalized-job-detail__sections">
@@ -167,7 +204,10 @@
             }
           </ul>
         </article>
-        <article><h2>Technical stack</h2><p>{{ displayList(job.technicalStack) }}</p></article>
+        <article>
+          <h2>Tools and technologies</h2>
+          <p>{{ displayList(job.toolsAndTechnologies) }}</p>
+        </article>
         <article>
           <h2>Additional details</h2>
           <ul>
@@ -183,8 +223,12 @@
       <div class="normalized-job-detail__confirmation alert alert-warning" role="alert">
         <p>Delete this normalized job? This action cannot be undone.</p>
         <div class="d-flex gap-2">
-          <button class="btn btn-danger" type="button" (click)="confirmDelete()">Confirm deletion</button>
-          <button class="btn btn-outline-secondary" type="button" (click)="cancelDelete()">Cancel</button>
+          <button class="btn btn-danger" type="button" (click)="confirmDelete()">
+            Confirm deletion
+          </button>
+          <button class="btn btn-outline-secondary" type="button" (click)="cancelDelete()">
+            Cancel
+          </button>
         </div>
       </div>
     } @else if (state() === 'deleting') {

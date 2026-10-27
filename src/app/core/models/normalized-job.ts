@@ -46,7 +46,7 @@ export interface NormalizedJobDetail {
   keyResponsibilities: string | string[] | null;
   requirements: string | string[] | null;
   desirables: string | string[] | null;
-  technicalStack: string[] | null;
+  toolsAndTechnologies: string[] | null;
   additionals: string[] | null;
   status: string;
   submitterId: string | null;

@@ -22,7 +22,7 @@ The response is a single normalized job detail object:
   "key_responsibilities": "Responsibilities",
   "requirements": "Requirements",
   "desirables": "Desirables",
-  "technical_stack": ["TypeScript"],
+  "tools_and_technologies": ["TypeScript"],
   "additionals": ["Remote work"],
   "status": "completed",
   "submitter_id": "user-1",
@@ -32,6 +32,7 @@ The response is a single normalized job detail object:
 ```
 
 The client maps server field names to the repository's model naming convention where needed.
+The client prefers `tools_and_technologies`; for backward compatibility it falls back to the legacy `technical_stack` or `technicalStack` field when the preferred field is absent or null.
 
 ## Update header details
 

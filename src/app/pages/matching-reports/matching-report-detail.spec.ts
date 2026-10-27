@@ -184,7 +184,7 @@ function makeJobDetail(): NormalizedJobDetail {
     keyResponsibilities: null,
     requirements: null,
     desirables: null,
-    technicalStack: null,
+    toolsAndTechnologies: null,
     additionals: null,
     status: 'completed',
     submitterId: null,

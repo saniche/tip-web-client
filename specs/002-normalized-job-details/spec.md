@@ -6,9 +6,9 @@
 
 **Status**: Draft
 
-**Input**: User description: "A new page to display the details of a normalized job. Users can select a job from the normalized listing to view its details. Users with write access can delete the job or update its header details (company, location, salary, and source). The page accepts a job ID and retrieves details from the server. The detail record includes id, url, title, company, location, salary, source, posting_date, summary, key_responsibilities, requirements, desirables, technical_stack, additionals, status, submitter_id, created_at, and has_write_access. The source URL is not clickable when the source is email."
+**Input**: User description: "A new page to display the details of a normalized job. Users can select a job from the normalized listing to view its details. Users with write access can delete the job or update its header details (company, location, salary, and source). The page accepts a job ID and retrieves details from the server. The detail record includes id, url, title, company, location, salary, source, posting_date, summary, key_responsibilities, requirements, desirables, tools_and_technologies, additionals, status, submitter_id, created_at, and has_write_access. The source URL is not clickable when the source is email."
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - View a normalized job's details (Priority: P1)
 
@@ -67,7 +67,7 @@ As a user with write access to a job, I want to delete it when it should no long
 - A user's write-access value is false; do not offer any edit or delete action.
 - The source denotes email, regardless of letter case; show the source URL as plain text or omit its link affordance.
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -84,12 +84,12 @@ As a user with write access to a job, I want to delete it when it should no long
 - **FR-011**: The page MUST provide clear loading, unavailable-job, and load-error states; a load error MUST offer a retry action.
 - **FR-012**: Missing or blank optional values MUST NOT prevent the page from displaying the rest of the job details.
 
-### Key Entities *(include if feature involves data)*
+### Key Entities _(include if feature involves data)_
 
 - **Normalized job detail**: One normalized posting identified by a job ID, including its source URL, title, company, location, salary, source, posting date, summary, key responsibilities, requirements, desirables, technical stack (a list of strings), additionals (a list of strings), processing status, submitter ID, creation date, and current user's write-access permission.
 - **Editable header details**: The company, location, salary, and source values of a normalized job. These are the only fields a user with write access can change through this feature.
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 

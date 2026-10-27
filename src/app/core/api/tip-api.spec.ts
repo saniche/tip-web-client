@@ -309,7 +309,9 @@ describe('TipApi', () => {
       key_responsibilities: 'Responsibilities',
       requirements: 'Requirements',
       desirables: 'Desirables',
-      technical_stack: ['TypeScript'],
+      tools_and_technologies: ['TypeScript'],
+      technical_stack: ['Legacy tool'],
+      technicalStack: ['Legacy camel-case tool'],
       additionals: ['Remote'],
       status: 'completed',
       submitter_id: 'user-1',
@@ -331,7 +333,7 @@ describe('TipApi', () => {
       keyResponsibilities: 'Responsibilities',
       requirements: 'Requirements',
       desirables: 'Desirables',
-      technicalStack: ['TypeScript'],
+      toolsAndTechnologies: ['TypeScript'],
       additionals: ['Remote'],
       status: 'completed',
       submitterId: 'user-1',
@@ -339,6 +341,36 @@ describe('TipApi', () => {
       hasWriteAccess: true,
       isInterested: true,
     });
+  });
+
+  it('falls back to the legacy technical_stack response field', () => {
+    let result: unknown;
+
+    service.getNormalizedJob('job-legacy').subscribe((detail) => {
+      result = detail;
+    });
+
+    const request = http.expectOne(`${environment.baseUrl}/jobs/job-legacy`);
+    request.flush({
+      id: 'job-legacy',
+      tools_and_technologies: null,
+      technical_stack: ['Legacy tool'],
+    });
+
+    expect(result).toMatchObject({ toolsAndTechnologies: ['Legacy tool'] });
+  });
+
+  it('preserves the legacy camel-case response alias', () => {
+    let result: unknown;
+
+    service.getNormalizedJob('job-camel-legacy').subscribe((detail) => {
+      result = detail;
+    });
+
+    const request = http.expectOne(`${environment.baseUrl}/jobs/job-camel-legacy`);
+    request.flush({ id: 'job-camel-legacy', technicalStack: ['Legacy camel-case tool'] });
+
+    expect(result).toMatchObject({ toolsAndTechnologies: ['Legacy camel-case tool'] });
   });
 
   it('updates only normalized job header fields', () => {

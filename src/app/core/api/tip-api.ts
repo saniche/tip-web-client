@@ -238,10 +238,7 @@ export class TipApi {
     request: UpdateApplicationRequest,
   ): Observable<ApplicationJournalEntry> {
     return this.http
-      .patch<unknown>(
-        `${this.baseUrl}/applications/${encodeURIComponent(applicationId)}/`,
-        request,
-      )
+      .patch<unknown>(`${this.baseUrl}/applications/${encodeURIComponent(applicationId)}/`, request)
       .pipe(switchMap(() => this.getApplication(applicationId)));
   }
 
@@ -284,6 +281,7 @@ interface NormalizedJobDetailResponse {
   keyResponsibilities?: string | string[] | null;
   requirements?: string | string[] | null;
   desirables?: string | string[] | null;
+  tools_and_technologies?: string[] | null;
   technical_stack?: string[] | null;
   technicalStack?: string[] | null;
   additionals?: string[] | null;
@@ -317,7 +315,11 @@ function mapNormalizedJobDetail(response: NormalizedJobDetailResponse): Normaliz
     keyResponsibilities: response.key_responsibilities ?? response.keyResponsibilities ?? null,
     requirements: response.requirements ?? null,
     desirables: response.desirables ?? null,
-    technicalStack: response.technical_stack ?? response.technicalStack ?? null,
+    toolsAndTechnologies:
+      response.tools_and_technologies ??
+      response.technical_stack ??
+      response.technicalStack ??
+      null,
     additionals: response.additionals ?? null,
     status: response.status ?? 'unknown',
     submitterId: response.submitter_id ?? response.submitterId ?? null,
@@ -389,9 +391,15 @@ function mapApplicationJournalEntry(response: unknown): ApplicationJournalEntry 
       url: optionalString(job, 'url', 'posting_url', 'postingUrl'),
     },
     recruiterInfo: {
-      name: optionalString(entry, 'recruiter_name', 'recruiterName') ?? optionalString(recruiter, 'name'),
-      email: optionalString(entry, 'recruiter_email', 'recruiterEmail') ?? optionalString(recruiter, 'email'),
-      phone: optionalString(entry, 'recruiter_phone', 'recruiterPhone') ?? optionalString(recruiter, 'phone'),
+      name:
+        optionalString(entry, 'recruiter_name', 'recruiterName') ??
+        optionalString(recruiter, 'name'),
+      email:
+        optionalString(entry, 'recruiter_email', 'recruiterEmail') ??
+        optionalString(recruiter, 'email'),
+      phone:
+        optionalString(entry, 'recruiter_phone', 'recruiterPhone') ??
+        optionalString(recruiter, 'phone'),
     },
     contactDate: optionalString(entry, 'contact_date', 'contactDate'),
     followUpDate: optionalString(entry, 'follow_up_date', 'followUpDate'),
@@ -410,7 +418,7 @@ function mapApplicationStatusHistoryEntry(response: unknown) {
   return {
     id: optionalString(event, 'id', 'history_id', 'historyId'),
     status: requiredStatus(event, 'status'),
-    changedAt: optionalString(      event,      'date', 'changed_at', 'changedAt'    ),
+    changedAt: optionalString(event, 'date', 'changed_at', 'changedAt'),
     note: optionalString(event, 'note'),
   };
 }

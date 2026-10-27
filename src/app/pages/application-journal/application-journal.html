@@ -153,11 +153,11 @@
               <td>{{ formatDate(entry.job.postingDate) }}</td>
               <td>{{ statusLabel(entry.status) }}</td>
               <td>
-                @if (entry.recruiterName || entry.recruiterEmail) {
-                  <span>{{ displayValue(entry.recruiterName) }}</span>
-                  @if (entry.recruiterEmail) {
-                    <a class="d-block" [href]="'mailto:' + entry.recruiterEmail">
-                      {{ entry.recruiterEmail }}
+                @if (entry.recruiterInfo.name || entry.recruiterInfo.email) {
+                  <span>{{ displayValue(entry.recruiterInfo.name) }}</span>
+                  @if (entry.recruiterInfo.email) {
+                    <a class="d-block" [href]="'mailto:' + entry.recruiterInfo.email">
+                      {{ entry.recruiterInfo.email }}
                     </a>
                   }
                 } @else {

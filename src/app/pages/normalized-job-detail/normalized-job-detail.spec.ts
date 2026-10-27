@@ -19,7 +19,7 @@ const detail: JobDetail = {
   keyResponsibilities: 'First responsibility\n\nSecond responsibility',
   requirements: 'First requirement\nSecond requirement',
   desirables: 'Preferred skill',
-  technicalStack: ['TypeScript'],
+  toolsAndTechnologies: ['TypeScript'],
   additionals: ['Remote'],
   status: 'completed',
   submitterId: 'user-1',
@@ -114,14 +114,18 @@ describe('NormalizedJobDetail', () => {
     const desirables = Array.from(root().querySelectorAll('article')).find((article) =>
       article.querySelector('h2')?.textContent?.includes('Desirables'),
     );
-    expect(Array.from(desirables?.querySelectorAll('li') ?? []).map((item) => item.textContent?.trim()))
-      .toEqual(['Preferred skill']);
+    expect(
+      Array.from(desirables?.querySelectorAll('li') ?? []).map((item) => item.textContent?.trim()),
+    ).toEqual(['Preferred skill']);
 
     const additionalDetails = Array.from(root().querySelectorAll('article')).find((article) =>
       article.querySelector('h2')?.textContent?.includes('Additional details'),
     );
-    expect(Array.from(additionalDetails?.querySelectorAll('li') ?? []).map((item) => item.textContent?.trim()))
-      .toEqual(['Remote']);
+    expect(
+      Array.from(additionalDetails?.querySelectorAll('li') ?? []).map((item) =>
+        item.textContent?.trim(),
+      ),
+    ).toEqual(['Remote']);
   });
 
   it('renders array values for responsibility, requirement, and desirable lists', () => {
