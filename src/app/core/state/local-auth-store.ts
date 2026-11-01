@@ -55,11 +55,15 @@ export class LocalAuthStore extends signalStore(
 
       console.log('Rehydrating local auth state from localStorage');
       const saved = loadFromLocalStorage();
-      if (!saved) return;
+      if (!saved) {
+        patchState(store, INITIAL_AUTH_STATE);
+        return;
+      }
 
       // Remove if expired
       if (saved.expiresAt && Date.now() >= saved.expiresAt) {
         clearLocalStorage();
+        patchState(store, INITIAL_AUTH_STATE);
         return;
       }
 

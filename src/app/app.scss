@@ -38,28 +38,6 @@
   font-size: 0.9rem;
 }
 
-.app-shell__nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-.app-shell__nav a {
-  border: 1px solid #527496;
-  border-radius: 0.5rem;
-  padding: 0.5rem 0.9rem;
-  background: transparent;
-  color: #fff;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.app-shell__nav a.is-active {
-  border-color: var(--tip-coral);
-  background: var(--tip-coral);
-  color: #fff;
-}
-
 .app-shell__session {
   display: flex;
   align-items: center;

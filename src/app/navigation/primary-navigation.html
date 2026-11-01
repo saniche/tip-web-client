@@ -1,0 +1,38 @@
+<nav class="navigation" aria-label="Primary" (keydown.escape)="closeMenu($event)">
+  <button #menuTrigger class="navigation__menu-toggle" type="button"
+    aria-controls="primary-navigation-areas" [attr.aria-expanded]="menuOpen()"
+    (click)="menuOpen.set(!menuOpen())">Menu</button>
+  <div id="primary-navigation-areas" class="navigation__areas" [class.is-open]="menuOpen()">
+    @for (area of areas; track area.id) {
+      <div class="navigation__area" [attr.data-area]="area.id"
+        [class.is-active]="context.current()?.areaId === area.id">
+        @if (area.availability !== 'available') {
+          <button type="button" class="navigation__trigger" disabled [attr.aria-label]="area.label + ' (availability unverified)'">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="area.icon" /></svg>
+            {{ area.label }} <span class="navigation__unavailable">(unavailable)</span>
+          </button>
+        } @else if (area.destinations.length === 1) {
+          <a class="navigation__trigger" [routerLink]="area.destinations[0].path"
+            routerLinkActive="is-current" [routerLinkActiveOptions]="exactPath" ariaCurrentWhenActive="page">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="area.icon" /></svg>
+            {{ area.label }}
+          </a>
+        } @else {
+          <button #areaTrigger type="button" class="navigation__trigger"
+            [attr.aria-controls]="'navigation-' + area.id" [attr.aria-expanded]="openArea() === area.id"
+            (click)="toggleArea(area.id)" (keydown.escape)="closeArea($event, areaTrigger)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="area.icon" /></svg>
+            {{ area.label }}
+          </button>
+          <div class="navigation__links" [id]="'navigation-' + area.id"
+            [hidden]="openArea() !== area.id" (keydown.escape)="closeArea($event, areaTrigger)">
+            @for (destination of area.destinations; track destination.path) {
+              <a [routerLink]="destination.path" routerLinkActive="is-current"
+                [routerLinkActiveOptions]="exactPath" ariaCurrentWhenActive="page">{{ destination.label }}</a>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+</nav>

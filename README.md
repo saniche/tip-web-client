@@ -97,12 +97,17 @@ The client integrates with the Talent Intelligence Platform API and provides the
 
 > The Jobs pipeline view and dashboard stage metrics are a lightweight workflow view. They should not be confused with the API-backed Application Journal, which is the source for tracked applications.
 
+### Feature navigation
+
+The primary navigation groups existing pages under Dashboard, My Profile, Jobs, Job Matching, and Applications. Jobs contains the lightweight Workflow pipeline as well as normalized jobs and interests. Settings is hidden because no settings destination exists.
+
+Tailoring provides navigation to the existing session and history pages, including request details, document previews, and downloads. These pages require authentication; their service-backed workflows still need verification with authenticated fixtures.
+
 ## Current client scope and known gaps
 
 The following capabilities are **not currently exposed as complete client workflows** in this repository:
 
-- **Tailored CV generation:** no dedicated client page or end-to-end CV-tailoring workflow is currently present.
-- **Cover letter generation:** no dedicated client page or end-to-end cover-letter workflow is currently present.
+- **Tailoring service availability:** the existing CV and cover-letter client workflows have not been verified against the target service in this navigation change.
 - **Direct job application submission:** the normalized job detail view currently shows this action as unavailable. Applications are recorded and managed through the Application Journal; the client does not automatically submit applications to employers.
 - **Dashboard analytics:** the dashboard is an operational overview, not yet a comprehensive analytics dashboard with aggregated counts and charts across all platform modules.
 
@@ -128,7 +133,7 @@ These items are client-side scope observations, not statements that the correspo
 | `/applications/new`     | Create an application entry                  |
 | `/applications/:id`     | View and edit an application entry           |
 
-Some routes are protected by the client authentication guard. The profile page also checks authentication before displaying profile data.
+Dashboard and the normalized job listing routes are publicly accessible. Sign-in and registration are also public so users can authenticate. All other feature routes, including normalized job details, require authentication; signed-out visitors are redirected to sign-in. Signing out returns to the dashboard. Client route guards do not replace backend authorization; anonymous access to listing data depends on the backend, which returned HTTP 401 in the local verification environment.
 
 ## Technology stack
 
