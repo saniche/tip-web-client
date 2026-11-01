@@ -35,6 +35,9 @@
         </div>
       </div>
       <div class="normalized-job-detail__actions">
+        @if (job.status.toLowerCase() === 'completed') {
+          <a class="btn btn-primary" routerLink="/tailoring-session" [queryParams]="{ jobId: job.id }">Add to tailoring session</a>
+        }
         @if (!isApplied()) {
           <button class="btn btn-outline-warning" type="button" disabled>
             Apply (Feature not yet available)

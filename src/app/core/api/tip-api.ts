@@ -38,6 +38,13 @@ import {
 } from '../models/auth.models';
 import { ProfileSession, UserProfile } from '../models/profile.models';
 import {
+  ProfileVersion,
+  ProfileVersionDetail,
+  TailoringInput,
+  TailoringProcess,
+  TailoringRequest,
+} from '../models/tailored-cv';
+import {
   MatchingProcess,
   MatchingReport,
   MatchingReportSummary,
@@ -153,6 +160,40 @@ export class TipApi {
 
   getProfile(): Observable<UserProfile> {
     return this.http.get<UserProfile>(`${this.baseUrl}/profile`);
+  }
+
+  listProfiles(): Observable<ProfileVersion[]> {
+    return this.http.get<ProfileVersion[]>(`${this.baseUrl}/profiles`);
+  }
+
+  getProfileVersion(id: string): Observable<ProfileVersionDetail> {
+    return this.http.get<ProfileVersionDetail>(`${this.baseUrl}/profiles/${encodeURIComponent(id)}`);
+  }
+
+  createTailoring(payload: TailoringInput): Observable<TailoringProcess> {
+    return this.http.post<TailoringProcess>(`${this.baseUrl}/tailoring`, payload);
+  }
+
+  getTailoringProcess(id: string): Observable<TailoringProcess> {
+    return this.http.get<TailoringProcess>(
+      `${this.baseUrl}/processing-jobs/${encodeURIComponent(id)}`,
+    );
+  }
+
+  listTailoringRequests(): Observable<TailoringRequest[]> {
+    return this.http.get<TailoringRequest[]>(`${this.baseUrl}/tailoring/requests`);
+  }
+
+  getTailoringRequest(id: string): Observable<TailoringRequest> {
+    return this.http.get<TailoringRequest>(
+      `${this.baseUrl}/tailoring/requests/${encodeURIComponent(id)}`,
+    );
+  }
+
+  downloadTailoredDocument(id: string): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/tailoring/documents/${encodeURIComponent(id)}/download`, {
+      responseType: 'blob',
+    });
   }
 
   updateProfile(data: UserProfile['data'], output_language: string): Observable<UserProfile> {

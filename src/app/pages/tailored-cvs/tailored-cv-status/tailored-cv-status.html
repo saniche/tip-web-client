@@ -1,0 +1,5 @@
+<div role="status">
+  <p>Status: <strong>{{ status() || 'Checking' }}</strong></p>
+  @if (warning()) { <p class="alert alert-warning">{{ warning() }}</p> }
+  @if (error()) { <p class="alert alert-danger">{{ error() }}</p> }
+</div>

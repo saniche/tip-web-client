@@ -1,0 +1,117 @@
+<section class="tailoring-setup">
+  <h1>Tailoring session</h1>
+  <p>Review the generated CV for accuracy. Your saved profile will not be changed.</p>
+  <p>This session is a draft. No tailoring request is sent until you review it and select Start tailoring.</p>
+  <p><a routerLink="/tailored-cvs">View tailored CV history</a></p>
+  @if (store.sessionSource()) {
+    <button class="btn btn-outline-danger mb-3" type="button" data-testid="discard-tailoring-session"
+      [disabled]="store.submitting() || !!store.accepted()" (click)="discardSession()">Discard session</button>
+  }
+  @if (launchError(); as error) {
+    <p class="alert alert-danger" role="alert">{{ error }}</p>
+  }
+  @if (pendingReplacement(); as replacement) {
+    <div class="alert alert-warning" role="alert">
+      <p>Your current session cannot be combined with this {{ replacement.source === 'report' ? 'matching report' : 'job' }}. Replace the current session?</p>
+      <button class="btn btn-warning me-2" type="button" data-testid="replace-tailoring-session" (click)="replaceSession()">Replace session</button>
+      <button class="btn btn-outline-secondary" type="button" data-testid="keep-tailoring-session" (click)="pendingReplacement.set(null)">Keep current session</button>
+    </div>
+  }
+  @if (store.loading()) {
+    <p role="status">Loading tailoring options…</p>
+  }
+  @if (store.addingJob()) {
+    <p role="status">Adding job to the session…</p>
+  }
+  @if (store.error(); as error) {
+    <div class="alert alert-danger" role="alert">
+      <p>{{ error }}</p>
+      @if (store.submissionUncertain()) {
+        <a routerLink="/tailored-cvs">Check CV history</a>
+      } @else if (store.sessionSource()) {
+        <button class="btn btn-outline-danger" type="button" (click)="retrySetup()">Retry</button>
+        <a routerLink="/profile">Manage your profile</a>
+      }
+    </div>
+  }
+  @if (store.warning(); as warning) {
+    <p class="alert alert-warning" role="status">{{ warning }}</p>
+  }
+  @if (!store.loading() && !store.sessionSource()) {
+    <div class="alert alert-info" role="status">
+      <p>Your tailoring session is empty. Add jobs from normalized job pages or start from a matching report.</p>
+      <a routerLink="/normalized-jobs">Browse normalized jobs</a>
+      <a class="ms-2" routerLink="/matching-reports">Browse matching reports</a>
+    </div>
+  }
+  @if (!store.loading() && store.sessionSource() && !pendingReplacement()) {
+    @if (store.sessionSource() === 'job') {
+      <p><a routerLink="/normalized-jobs">Browse normalized jobs to add more</a></p>
+    } @else {
+      <p>This session contains only jobs from its matching report.</p>
+    }
+    @if (reviewing()) {
+      @if (store.activeRequest(); as active) {
+        <p class="alert alert-info">A request for these jobs and this profile is already processing.
+          <a [routerLink]="['/tailored-cvs', active.id]">View request</a>
+        </p>
+      }
+      <app-tailored-cv-confirmation
+        [jobs]="reviewJobs()" [profile]="reviewProfile()" [mode]="store.mode()"
+        [language]="store.language()" [busy]="store.submitting()" [canConfirm]="store.canSubmit()"
+        (removeJob)="store.toggleJob($event, false)" (cancel)="reviewing.set(false)"
+        (confirm)="store.submit()" />
+    } @else {
+    <fieldset class="mb-3">
+      <legend>Target jobs (choose 1–10)</legend>
+      @for (job of store.jobs(); track job.id) {
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" [id]="'job-' + job.id"
+            [checked]="store.selectedJobIds().includes(job.id)" [disabled]="store.submitting() || store.addingJob()"
+            (change)="store.toggleJob(job.id, checked($event))" />
+          <label class="form-check-label" [for]="'job-' + job.id">{{ job.title || job.id }} @if (job.company) { — {{ job.company }} }</label>
+        </div>
+      } @empty {
+        <p>No completed jobs are available.</p>
+      }
+    </fieldset>
+    <div class="mb-3">
+      <label class="form-label" for="tailoring-profile">Profile version</label>
+      <select class="form-select" id="tailoring-profile" [ngModel]="store.profileId()"
+        (ngModelChange)="store.selectProfile($event)" [disabled]="store.sessionSource() === 'report' || store.submitting()">
+        <option value="">Select a profile</option>
+        @for (profile of store.profiles(); track profile.id) {
+          <option [value]="profile.id">{{ profile.label || profile.id }}{{ profile.is_default ? ' (default)' : '' }} — {{ profile.output_language }} — {{ profile.created_at }}</option>
+        }
+      </select>
+      @if (store.sessionSource() === 'report') { <p>This report's profile is required and cannot be changed.</p> }
+      @if (store.profileLoading()) { <p role="status">Verifying profile…</p> }
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="tailoring-mode">CV mode</label>
+      <select class="form-select" id="tailoring-mode" [ngModel]="store.mode()" (ngModelChange)="store.mode.set($event)" [disabled]="store.submitting()">
+        <option value="per_job">One CV per job</option>
+        <option value="general">One CV for all selected jobs</option>
+      </select>
+      <p>{{ store.mode() === 'per_job' ? store.selectedJobIds().length : (store.selectedJobIds().length ? 1 : 0) }} CV(s) will be generated.</p>
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="tailoring-language">Output language</label>
+      <input class="form-control" id="tailoring-language" [ngModel]="store.language()" (ngModelChange)="store.language.set($event)" [disabled]="store.submitting()" />
+    </div>
+    @if (store.activeRequest(); as active) {
+      <p class="alert alert-info">A request for these jobs and this profile is already processing.
+        <a [routerLink]="['/tailored-cvs', active.id]">View request</a>
+      </p>
+    }
+    @if (store.accepted(); as accepted) {
+      <p class="alert alert-success" role="status">Request accepted.
+        @if (accepted.result_id) { <a [routerLink]="['/tailored-cvs', accepted.result_id]">View progress</a> }
+      </p>
+    }
+    <button class="btn btn-primary" type="button" data-testid="review-tailoring" [disabled]="!store.canSubmit()" (click)="reviewing.set(true)">
+      Review tailoring
+    </button>
+    }
+  }
+</section>

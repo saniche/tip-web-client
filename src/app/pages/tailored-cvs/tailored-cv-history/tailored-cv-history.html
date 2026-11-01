@@ -1,0 +1,47 @@
+<section class="tailoring-history">
+  <h1>Tailored CV history</h1>
+  <p><a routerLink="/tailoring-session">Open tailoring session</a></p>
+  @if (store.documentError(); as error) { <p class="alert alert-danger" role="alert">{{ error }}</p> }
+  @if (store.historyLoading()) {
+    <p role="status">Loading CV requests…</p>
+  } @else if (store.historyError(); as error) {
+    <div class="alert alert-danger" role="alert">
+      <p>{{ error }}</p>
+      <button class="btn btn-primary" type="button" (click)="store.loadHistory()">Retry</button>
+    </div>
+  } @else {
+    @if (store.submissionUncertain()) {
+      <div class="alert alert-warning" role="alert">
+        <p>A previous submission could not be confirmed. Check this history carefully before allowing another submission; the previous request might still appear later.</p>
+        <button class="btn btn-warning" type="button" (click)="store.acknowledgeUncertainSubmission()">I checked history; allow submissions</button>
+      </div>
+    }
+    @for (request of store.requests(); track request.id) {
+      <article class="card mb-3">
+        <div class="card-body">
+          <h2 class="h5"><a [routerLink]="['/tailored-cvs', request.id]">Request {{ request.id }}</a></h2>
+          <p>Status: {{ request.status }} · Mode: {{ request.cv_mode }} · Language: {{ request.output_language }}</p>
+          <p>Profile: {{ request.profile_id }} · Jobs: {{ request.job_ids.join(', ') }}</p>
+          <p>Created: {{ request.created_at }}</p>
+          @if (store.historyDocumentErrors().includes(request.id)) {
+            <p class="text-warning">Document details are unavailable. Open this request to retry.</p>
+          }
+          @for (document of request.documents || []; track document.id) {
+            @if (document.kind === 'cv') {
+              <p>
+                {{ document.filename || 'CV document' }} — {{ document.status }} —
+                Jobs: {{ (document.job_ids && document.job_ids.length ? document.job_ids : request.job_ids).join(', ') }}
+                @if (document.status === 'completed') {
+                  <a [routerLink]="['/tailored-cvs', request.id, 'documents', document.id]">Preview</a>
+                  <button class="btn btn-link" type="button" (click)="store.downloadDocument(document.id, document.filename)">Download</button>
+                }
+              </p>
+            }
+          }
+        </div>
+      </article>
+    } @empty {
+      <p>No tailored CVs yet. Start from a <a routerLink="/normalized-jobs">normalized job</a>.</p>
+    }
+  }
+</section>

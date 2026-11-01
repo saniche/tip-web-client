@@ -1,0 +1,50 @@
+<section class="tailoring-detail">
+  <a routerLink="/tailored-cvs">Back to CV history</a>
+  <h1>Tailoring request</h1>
+  @if (store.detailLoading()) { <p role="status">Loading request…</p> }
+  @if (store.detailError(); as error) {
+    <div class="alert alert-danger" role="alert">
+      <p>{{ error }}</p>
+      <button type="button" class="btn btn-outline-danger" (click)="store.trackRequest(requestId())">Check status again</button>
+    </div>
+  }
+  @if (store.detail(); as request) {
+    <app-tailored-cv-status [status]="request.status === 'processing' ? (store.process()?.status || request.status) : request.status" [warning]="store.trackingWarning()" [error]="request.error" />
+    <p>Profile: {{ request.profile_id }}</p>
+    <p>Jobs: {{ request.job_ids.join(', ') }}</p>
+    <p>Mode: {{ request.cv_mode }} · Output language: {{ request.output_language }}</p>
+    @if (request.status === 'failed') {
+      @if (reviewingRetry()) {
+        @if (retryJobWarning()) {
+          <p class="alert alert-warning">Some job details are unavailable; their identifiers are shown instead.</p>
+        }
+        <app-tailored-cv-confirmation
+          [jobs]="retryJobs()" [profile]="request.profile_id" [mode]="request.cv_mode"
+          [language]="request.output_language" [busy]="store.submitting()" [retry]="true"
+          [canConfirm]="!store.submissionUncertain()"
+          (removeJob)="removeRetryJob($event)" (cancel)="reviewingRetry.set(false)"
+          (confirm)="confirmRetry()" />
+      } @else {
+        <button type="button" class="btn btn-primary" data-testid="review-retry" [disabled]="store.submitting() || store.submissionUncertain()" (click)="reviewRetry()">Retry generation</button>
+      }
+    }
+    @if (store.documentError(); as error) { <p class="alert alert-danger" role="alert">{{ error }}</p> }
+    @for (document of request.documents || []; track document.id) {
+      @if (document.kind === 'cv') {
+        <article class="card mb-3">
+          <div class="card-body">
+            <h2 class="h5">{{ document.filename || 'CV document' }}</h2>
+            <p>Targets: {{ (document.job_ids && document.job_ids.length ? document.job_ids : request.job_ids).join(', ') }}</p>
+            <p>Status: {{ document.status }}</p>
+            @if (document.error) { <p class="alert alert-danger">{{ document.error }}</p> }
+            @if (document.warning) { <p class="alert alert-warning">{{ document.warning }}</p> }
+            @if (document.status === 'completed') {
+              <a class="btn btn-outline-primary me-2" [routerLink]="['/tailored-cvs', request.id, 'documents', document.id]">Preview</a>
+              <button class="btn btn-primary" type="button" (click)="store.downloadDocument(document.id, document.filename)">Download</button>
+            }
+          </div>
+        </article>
+      }
+    }
+  }
+</section>

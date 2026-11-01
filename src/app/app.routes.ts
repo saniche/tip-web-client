@@ -99,6 +99,56 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'tailoring-session',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/tailored-cvs/tailored-cv-setup/tailored-cv-setup').then(
+        (page) => page.TailoredCvSetup,
+      ),
+  },
+  {
+    path: 'tailored-cvs/new/job/:id',
+    canActivate: [authGuard],
+    data: { source: 'job' },
+    loadComponent: () =>
+      import('./pages/tailored-cvs/tailored-cv-setup/tailored-cv-setup').then(
+        (page) => page.TailoredCvSetup,
+      ),
+  },
+  {
+    path: 'tailored-cvs/new/report/:id',
+    canActivate: [authGuard],
+    data: { source: 'report' },
+    loadComponent: () =>
+      import('./pages/tailored-cvs/tailored-cv-setup/tailored-cv-setup').then(
+        (page) => page.TailoredCvSetup,
+      ),
+  },
+  {
+    path: 'tailored-cvs/:id/documents/:documentId',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/tailored-cvs/tailored-cv-preview/tailored-cv-preview').then(
+        (page) => page.TailoredCvPreview,
+      ),
+  },
+  {
+    path: 'tailored-cvs/:id',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/tailored-cvs/tailored-cv-request-detail/tailored-cv-request-detail').then(
+        (page) => page.TailoredCvRequestDetail,
+      ),
+  },
+  {
+    path: 'tailored-cvs',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/tailored-cvs/tailored-cv-history/tailored-cv-history').then(
+        (page) => page.TailoredCvHistory,
+      ),
+  },
+  {
     path: 'profile',
     component: ProfileComponent,
   },

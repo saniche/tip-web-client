@@ -1,0 +1,29 @@
+<section class="card mb-3" aria-labelledby="tailoring-confirmation-heading">
+  <div class="card-body">
+    <h2 id="tailoring-confirmation-heading" class="h4">Review and confirm tailoring</h2>
+    <p>{{ retry() ? 'No request will be sent until you confirm the retry.' : 'No request will be sent until you start tailoring.' }}</p>
+    <p><strong>Profile:</strong> {{ profile() }}</p>
+    <p><strong>Mode:</strong> {{ mode() === 'per_job' ? 'One CV per job' : 'One CV for all selected jobs' }}</p>
+    <p><strong>Output language:</strong> {{ language() }}</p>
+    <p><strong>CVs to generate:</strong> {{ mode() === 'per_job' ? jobs().length : (jobs().length ? 1 : 0) }}</p>
+    <h3 class="h5">Selected jobs</h3>
+    <ul class="list-group mb-3">
+      @for (job of jobs(); track job.id) {
+        <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+          <span>{{ job.label }}</span>
+          <button type="button" class="btn btn-outline-danger btn-sm" [disabled]="busy()" data-testid="remove-review-job"
+            [attr.aria-label]="'Remove ' + job.label" (click)="removeJob.emit(job.id)">Remove</button>
+        </li>
+      } @empty {
+        <li class="list-group-item">Select at least one job before confirming.</li>
+      }
+    </ul>
+    <button type="button" class="btn btn-primary me-2" data-testid="confirm-tailoring" [disabled]="!canConfirm() || busy() || !jobs().length"
+      (click)="confirm.emit()">
+      {{ busy() ? 'Submitting…' : (retry() ? 'Confirm retry' : 'Start tailoring') }}
+    </button>
+    <button type="button" class="btn btn-outline-secondary" data-testid="cancel-tailoring-review" [disabled]="busy()" (click)="cancel.emit()">
+      {{ retry() ? 'Cancel' : 'Back to setup' }}
+    </button>
+  </div>
+</section>

@@ -15,6 +15,7 @@
       </button>
     </div>
   } @else if (report(); as currentReport) {
+    <a class="btn btn-primary" routerLink="/tailoring-session" [queryParams]="{ reportId: currentReport.id }">Start tailoring session</a>
     <section class="matching-report-detail__metadata" aria-label="Report metadata">
       <p>Report ID: {{ currentReport.id }}</p>
       <p>Status: {{ currentReport.status }}</p>
