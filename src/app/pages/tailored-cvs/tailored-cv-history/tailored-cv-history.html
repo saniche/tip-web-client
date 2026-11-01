@@ -1,9 +1,9 @@
 <section class="tailoring-history">
-  <h1>Tailored CV history</h1>
+  <h1>Tailoring history</h1>
   <p><a routerLink="/tailoring-session">Open tailoring session</a></p>
   @if (store.documentError(); as error) { <p class="alert alert-danger" role="alert">{{ error }}</p> }
   @if (store.historyLoading()) {
-    <p role="status">Loading CV requests…</p>
+    <p role="status">Loading tailoring requests…</p>
   } @else if (store.historyError(); as error) {
     <div class="alert alert-danger" role="alert">
       <p>{{ error }}</p>
@@ -20,28 +20,27 @@
       <article class="card mb-3">
         <div class="card-body">
           <h2 class="h5"><a [routerLink]="['/tailored-cvs', request.id]">Request {{ request.id }}</a></h2>
-          <p>Status: {{ request.status }} · Mode: {{ request.cv_mode }} · Language: {{ request.output_language }}</p>
+          <p>Status: {{ request.status }} · CV mode: {{ request.cv_mode }} · Cover-letter mode: {{ request.cover_letter?.enabled ? request.cover_letter.mode : 'not requested' }} · Language: {{ request.output_language }}</p>
           <p>Profile: {{ request.profile_id }} · Jobs: {{ request.job_ids.join(', ') }}</p>
           <p>Created: {{ request.created_at }}</p>
           @if (store.historyDocumentErrors().includes(request.id)) {
             <p class="text-warning">Document details are unavailable. Open this request to retry.</p>
           }
           @for (document of request.documents || []; track document.id) {
-            @if (document.kind === 'cv') {
-              <p>
-                {{ document.filename || 'CV document' }} — {{ document.status }} —
-                Jobs: {{ (document.job_ids && document.job_ids.length ? document.job_ids : request.job_ids).join(', ') }}
-                @if (document.status === 'completed') {
-                  <a [routerLink]="['/tailored-cvs', request.id, 'documents', document.id]">Preview</a>
-                  <button class="btn btn-link" type="button" (click)="store.downloadDocument(document.id, document.filename)">Download</button>
-                }
-              </p>
-            }
+            <p>
+              {{ document.filename || (document.kind === 'cover_letter' ? 'Cover letter document' : 'CV document') }}
+              — {{ document.kind === 'cover_letter' ? 'Cover letter' : 'CV' }} — {{ document.status }} —
+              Jobs: {{ (document.job_ids && document.job_ids.length ? document.job_ids : request.job_ids).join(', ') }}
+              @if (document.status === 'completed') {
+                <a [routerLink]="['/tailored-cvs', request.id, 'documents', document.id]">Preview</a>
+                <button class="btn btn-link" type="button" (click)="store.downloadDocument(document.id, document.filename)">Download</button>
+              }
+            </p>
           }
         </div>
       </article>
     } @empty {
-      <p>No tailored CVs yet. Start from a <a routerLink="/normalized-jobs">normalized job</a>.</p>
+      <p>No tailoring requests yet. Start from a <a routerLink="/normalized-jobs">normalized job</a>.</p>
     }
   }
 </section>

@@ -2,7 +2,7 @@
   <h1>Tailoring session</h1>
   <p>Review the generated CV for accuracy. Your saved profile will not be changed.</p>
   <p>This session is a draft. No tailoring request is sent until you review it and select Start tailoring.</p>
-  <p><a routerLink="/tailored-cvs">View tailored CV history</a></p>
+  <p><a routerLink="/tailored-cvs">View tailoring history</a></p>
   @if (store.sessionSource()) {
     <button class="btn btn-outline-danger mb-3" type="button" data-testid="discard-tailoring-session"
       [disabled]="store.submitting() || !!store.accepted()" (click)="discardSession()">Discard session</button>
@@ -27,7 +27,7 @@
     <div class="alert alert-danger" role="alert">
       <p>{{ error }}</p>
       @if (store.submissionUncertain()) {
-        <a routerLink="/tailored-cvs">Check CV history</a>
+        <a routerLink="/tailored-cvs">Check tailoring history</a>
       } @else if (store.sessionSource()) {
         <button class="btn btn-outline-danger" type="button" (click)="retrySetup()">Retry</button>
         <a routerLink="/profile">Manage your profile</a>
@@ -58,6 +58,7 @@
       }
       <app-tailored-cv-confirmation
         [jobs]="reviewJobs()" [profile]="reviewProfile()" [mode]="store.mode()"
+        [coverLetterEnabled]="store.coverLetterEnabled()" [coverLetterMode]="store.coverLetterMode()"
         [language]="store.language()" [busy]="store.submitting()" [canConfirm]="store.canSubmit()"
         (removeJob)="store.toggleJob($event, false)" (cancel)="reviewing.set(false)"
         (confirm)="store.submit()" />
@@ -94,6 +95,23 @@
         <option value="general">One CV for all selected jobs</option>
       </select>
       <p>{{ store.mode() === 'per_job' ? store.selectedJobIds().length : (store.selectedJobIds().length ? 1 : 0) }} CV(s) will be generated.</p>
+    </div>
+    <div class="mb-3">
+      <div class="form-check">
+        <input class="form-check-input" id="tailoring-cover-letter-enabled" type="checkbox"
+          [checked]="store.coverLetterEnabled()" [disabled]="store.submitting()"
+          (change)="store.coverLetterEnabled.set(checked($event))" />
+        <label class="form-check-label" for="tailoring-cover-letter-enabled">Generate cover letters</label>
+      </div>
+      <label class="form-label mt-2" for="tailoring-cover-letter-mode">Cover-letter mode</label>
+      <select class="form-select" id="tailoring-cover-letter-mode" [ngModel]="store.coverLetterMode()"
+        (ngModelChange)="store.coverLetterMode.set($event)" [disabled]="!store.coverLetterEnabled() || store.submitting()">
+        <option value="per_job">One cover letter per job</option>
+        <option value="general">One cover letter for all selected jobs</option>
+      </select>
+      <p>{{ store.coverLetterEnabled()
+        ? (store.coverLetterMode() === 'per_job' ? store.selectedJobIds().length : (store.selectedJobIds().length ? 1 : 0))
+        : 0 }} cover letter(s) will be generated.</p>
     </div>
     <div class="mb-3">
       <label class="form-label" for="tailoring-language">Output language</label>

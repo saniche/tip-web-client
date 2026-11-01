@@ -51,6 +51,7 @@ describe('Tailoring confirmation', () => {
       getTailoringRequest: vi.fn(() => of({
         id: 'request-1', status: 'failed', error: 'Failed',
         job_ids: ['job-1', 'job-2'], profile_id: 'profile-1', cv_mode: 'general',
+        cover_letter: { enabled: true, mode: 'general' },
         output_language: 'French', documents: [],
       })),
       createTailoring: vi.fn(() => response),
@@ -126,6 +127,41 @@ describe('Tailoring confirmation', () => {
     expect(button(page, 'review-tailoring').disabled).toBe(false);
   });
 
+  it('reviews letter mode and count independently from the CV mode', () => {
+    fixture = TestBed.createComponent(TailoredCvSetup);
+    fixture.detectChanges();
+    const page = fixture.nativeElement as HTMLElement;
+    page.querySelector<HTMLInputElement>('#job-job-1')!.click();
+    page.querySelector<HTMLInputElement>('#job-job-2')!.click();
+
+    const cvMode = page.querySelector<HTMLSelectElement>('#tailoring-mode')!;
+    cvMode.value = 'general';
+    cvMode.dispatchEvent(new Event('change'));
+    const letterEnabled = page.querySelector<HTMLInputElement>('#tailoring-cover-letter-enabled')!;
+    letterEnabled.checked = true;
+    letterEnabled.dispatchEvent(new Event('change'));
+    const letterMode = page.querySelector<HTMLSelectElement>('#tailoring-cover-letter-mode')!;
+    letterMode.value = 'per_job';
+    letterMode.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    button(page, 'review-tailoring').click();
+    fixture.detectChanges();
+    expect(page.textContent).toContain('One CV for all selected jobs');
+    expect(page.textContent).toContain('Cover letters to generate: 2');
+    expect(api.createTailoring).not.toHaveBeenCalled();
+
+    button(page, 'cancel-tailoring-review').click();
+    fixture.detectChanges();
+    const updatedLetterMode = page.querySelector<HTMLSelectElement>('#tailoring-cover-letter-mode')!;
+    updatedLetterMode.value = 'general';
+    updatedLetterMode.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    button(page, 'review-tailoring').click();
+    fixture.detectChanges();
+    expect(page.textContent).toContain('Cover letters to generate: 1');
+  });
+
   it('requires a separate confirmation for retries and retries only remaining jobs', () => {
     vi.useFakeTimers();
     params.next(convertToParamMap({ id: 'request-1' }));
@@ -138,14 +174,17 @@ describe('Tailoring confirmation', () => {
     fixture.detectChanges();
     expect(api.createTailoring).not.toHaveBeenCalled();
     expect(page.textContent).toContain('Title job-1');
+    expect(page.textContent).toContain('One cover letter for all selected jobs');
+    expect(page.textContent).toContain('Cover letters to generate: 1');
     button(page, 'remove-review-job').click();
     fixture.detectChanges();
+    expect(page.textContent).toContain('Cover letters to generate: 1');
     button(page, 'confirm-tailoring').click();
     fixture.detectChanges();
     expect(api.createTailoring).toHaveBeenCalledTimes(1);
     expect(api.createTailoring).toHaveBeenCalledWith({
       job_ids: ['job-2'], profile_id: 'profile-1', cv_mode: 'general',
-      cover_letter: { enabled: false }, output_language: 'French',
+      cover_letter: { enabled: true, mode: 'general' }, output_language: 'French',
     });
     expect(button(page, 'confirm-tailoring').disabled).toBe(true);
   });

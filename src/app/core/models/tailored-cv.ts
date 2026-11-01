@@ -1,5 +1,11 @@
 export type TailoringMode = 'per_job' | 'general';
 
+export type CoverLetterOptions =
+  | { enabled: false; mode?: TailoringMode | null }
+  | { enabled: true; mode: TailoringMode };
+
+export type TailoredDocumentKind = 'cv' | 'cover_letter';
+
 export interface ProfileVersion {
   id: string;
   label: string | null;
@@ -17,7 +23,7 @@ export interface TailoringInput {
   job_ids: string[];
   profile_id: string;
   cv_mode: TailoringMode;
-  cover_letter: { enabled: false };
+  cover_letter: CoverLetterOptions;
   output_language: string;
 }
 
@@ -30,7 +36,7 @@ export interface TailoringProcess {
 
 export interface TailoredDocument {
   id: string;
-  kind: string;
+  kind: TailoredDocumentKind;
   scope: TailoringMode;
   job_id: string | null;
   job_ids: string[];
@@ -49,7 +55,7 @@ export interface TailoringRequest {
   job_ids: string[];
   profile_id: string;
   cv_mode: TailoringMode;
-  cover_letter: { enabled: boolean; mode: string | null };
+  cover_letter: { enabled: boolean; mode: TailoringMode | null };
   output_language: string;
   created_at: string;
   documents?: TailoredDocument[];

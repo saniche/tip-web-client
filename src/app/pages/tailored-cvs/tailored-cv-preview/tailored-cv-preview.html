@@ -1,12 +1,12 @@
 <section class="tailoring-preview">
   <a [routerLink]="['/tailored-cvs', requestId]">Back to request</a>
-  <h1>CV preview</h1>
+  <h1>{{ documentLabel() }} preview</h1>
   @if (contextLoading()) { <p role="status">Loading document context…</p> }
   @if (contextError(); as error) {
     <p class="alert alert-danger" role="alert">{{ error }}</p>
     <button class="btn btn-outline-primary" type="button" (click)="load()">Retry</button>
   }
-  @if (document(); as cv) {
+  @if (document(); as output) {
     <p>Profile: {{ profileId() }} · Jobs: {{ jobIds().join(', ') }}</p>
     @if (store.documentLoading()) { <p role="status">Loading document…</p> }
     @if (store.documentError(); as error) {
@@ -14,6 +14,6 @@
       <button class="btn btn-outline-primary" type="button" (click)="store.previewDocument(documentId)">Retry preview</button>
     }
     @if (store.preview(); as text) { <pre>{{ text }}</pre> }
-    <button class="btn btn-primary" type="button" (click)="store.downloadDocument(documentId, cv.filename)">Download</button>
+    <button class="btn btn-primary" type="button" (click)="store.downloadDocument(documentId, output.filename)">Download</button>
   }
 </section>

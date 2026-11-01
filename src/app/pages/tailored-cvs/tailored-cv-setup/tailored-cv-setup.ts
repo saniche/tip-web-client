@@ -53,7 +53,7 @@ export class TailoredCvSetup {
       if (!launch || this.store.loading() || this.store.addingJob()) return;
       this.pendingLaunch.set(null);
       if (this.store.submitting() || this.store.submissionUncertain() || this.store.accepted()) {
-        this.launchError.set('The previous submission is not confirmed. Check CV history before starting another session.');
+        this.launchError.set('The previous submission is not confirmed. Check tailoring history before starting another session.');
         return;
       }
       const source = this.store.sessionSource();

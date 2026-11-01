@@ -4,8 +4,12 @@
     <p>{{ retry() ? 'No request will be sent until you confirm the retry.' : 'No request will be sent until you start tailoring.' }}</p>
     <p><strong>Profile:</strong> {{ profile() }}</p>
     <p><strong>Mode:</strong> {{ mode() === 'per_job' ? 'One CV per job' : 'One CV for all selected jobs' }}</p>
+    <p><strong>Cover-letter mode:</strong> {{ coverLetterMode() === 'per_job' ? 'One cover letter per job' : 'One cover letter for all selected jobs' }}</p>
     <p><strong>Output language:</strong> {{ language() }}</p>
     <p><strong>CVs to generate:</strong> {{ mode() === 'per_job' ? jobs().length : (jobs().length ? 1 : 0) }}</p>
+    <p><strong>Cover letters to generate:</strong> {{ coverLetterEnabled()
+      ? (coverLetterMode() === 'per_job' ? jobs().length : (jobs().length ? 1 : 0))
+      : 0 }}</p>
     <h3 class="h5">Selected jobs</h3>
     <ul class="list-group mb-3">
       @for (job of jobs(); track job.id) {

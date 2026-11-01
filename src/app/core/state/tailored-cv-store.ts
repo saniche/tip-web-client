@@ -5,6 +5,7 @@ import { NormalizedJobDetail } from '../models/normalized-job';
 import { AuthStore } from './auth-store';
 import {
   ProfileVersion,
+  CoverLetterOptions,
   TailoringMode,
   TailoringProcess,
   TailoringRequest,
@@ -35,6 +36,8 @@ export class TailoredCvStore {
   readonly reportProfileId = signal<string | null>(null);
   readonly reportSource = signal(false);
   readonly mode = signal<TailoringMode>('per_job');
+  readonly coverLetterEnabled = signal(false);
+  readonly coverLetterMode = signal<TailoringMode>('per_job');
   readonly language = signal('');
   readonly requests = signal<TailoringRequest[]>([]);
   readonly accepted = signal<TailoringProcess | null>(null);
@@ -93,6 +96,8 @@ export class TailoredCvStore {
       this.profileReady.set(false);
       this.reportProfileId.set(null);
       this.language.set('');
+      this.coverLetterEnabled.set(false);
+      this.coverLetterMode.set('per_job');
       this.requests.set([]);
       this.detail.set(null);
       this.process.set(null);
@@ -126,6 +131,8 @@ export class TailoredCvStore {
     this.reportSource.set(false);
     this.reportProfileId.set(null);
     this.mode.set('per_job');
+    this.coverLetterEnabled.set(false);
+    this.coverLetterMode.set('per_job');
     this.language.set('');
     if (!this.submissionUncertain()) this.error.set(null);
     this.warning.set(null);
@@ -149,6 +156,8 @@ export class TailoredCvStore {
     this.reportSource.set(source === 'report');
     this.reportProfileId.set(null);
     this.mode.set('per_job');
+    this.coverLetterEnabled.set(false);
+    this.coverLetterMode.set('per_job');
     this.language.set('');
     this.accepted.set(null);
     this.submissionUncertain.set(false);
@@ -351,14 +360,16 @@ export class TailoredCvStore {
       job_ids: [...this.selectedJobIds()],
       profile_id: this.profileId(),
       cv_mode: this.mode(),
-      cover_letter: { enabled: false },
+      cover_letter: this.coverLetterEnabled()
+        ? { enabled: true, mode: this.coverLetterMode() }
+        : { enabled: false },
       output_language: this.language().trim(),
     }).subscribe({
       next: (process) => {
         if (owner !== (this.auth.authSession().user?.email ?? null)) return;
         this.submitting.set(false);
         if (!process.id || !process.result_id) {
-          this.error.set('The request may have been accepted, but its identifiers were missing. Check CV history before retrying.');
+          this.error.set('The request may have been accepted, but its identifiers were missing. Check tailoring history before retrying.');
           this.submissionUncertain.set(true);
           return;
         }
@@ -374,7 +385,7 @@ export class TailoredCvStore {
         console.error('Unable to submit tailoring request', error);
         this.submitting.set(false);
         this.submissionUncertain.set(true);
-        this.error.set('Unable to confirm submission. Check CV history before retrying to avoid duplicates.');
+        this.error.set('Unable to confirm submission. Check tailoring history before retrying to avoid duplicates.');
       },
     });
   }
@@ -390,18 +401,18 @@ export class TailoredCvStore {
       next: (requests) => {
         if (owner !== (this.auth.authSession().user?.email ?? null)) return;
         this.requests.set(requests);
-        const complete = requests.filter((request) =>
-          request.status === 'completed' || request.status === 'partial',
+        const terminal = requests.filter((request) =>
+          ['completed', 'partial', 'failed'].includes(request.status),
         );
-        if (!complete.length) {
+        if (!terminal.length) {
           this.historyLoading.set(false);
           return;
         }
 
-        forkJoin(complete.map((request) => this.api.getTailoringRequest(request.id).pipe(
+        forkJoin(terminal.map((request) => this.api.getTailoringRequest(request.id).pipe(
           map((detail) => ({ detail, id: request.id, failed: false })),
           catchError((error: unknown) => {
-            console.error('Unable to load CV history documents', error);
+            console.error('Unable to load tailoring history documents', error);
             return of({ detail: request, id: request.id, failed: true });
           }),
         ))).subscribe((results) => {
@@ -416,7 +427,7 @@ export class TailoredCvStore {
         if (owner !== (this.auth.authSession().user?.email ?? null)) return;
         console.error('Unable to load tailoring history', error);
         this.historyLoading.set(false);
-        this.historyError.set('Unable to load CV history. Please retry.');
+        this.historyError.set('Unable to load tailoring history. Please retry.');
       },
     });
   }
@@ -492,11 +503,24 @@ export class TailoredCvStore {
     if (!request || request.status !== 'failed' || this.submitting() || this.submissionUncertain()) return;
     const owner = this.auth.authSession().user?.email ?? null;
     const jobIds = [...selectedJobIds];
-    if (!request.profile_id || !request.output_language.trim() || request.job_ids.length < 1 ||
+    const coverLetter = request.cover_letter ?? { enabled: false, mode: null };
+    if (!request.profile_id || !request.output_language.trim() ||
+        typeof coverLetter.enabled !== 'boolean' ||
+        request.job_ids.length < 1 ||
         request.job_ids.length > 10 || new Set(request.job_ids).size !== request.job_ids.length ||
         !['per_job', 'general'].includes(request.cv_mode)) {
       this.detailError.set('The original request is missing valid retry details. Start a new request from a job or report.');
       return;
+    }
+    let retryCoverLetter: CoverLetterOptions;
+    if (coverLetter.enabled) {
+      if (!isTailoringMode(coverLetter.mode)) {
+        this.detailError.set('The original request is missing valid retry details. Start a new request from a job or report.');
+        return;
+      }
+      retryCoverLetter = { enabled: true, mode: coverLetter.mode };
+    } else {
+      retryCoverLetter = { enabled: false };
     }
     if (jobIds.length < 1 || jobIds.length > 10 || new Set(jobIds).size !== jobIds.length ||
         jobIds.some((id) => !request.job_ids.includes(id))) {
@@ -520,14 +544,14 @@ export class TailoredCvStore {
             jobs.some((job, index) => job.id !== jobIds[index] || job.status.toLowerCase() !== 'completed') ||
             requests.some(sameJobs)) {
           this.submitting.set(false);
-          this.detailError.set('The profile or jobs are unavailable, or a request is already processing. Check CV history.');
+          this.detailError.set('The profile or jobs are unavailable, or a request is already processing. Check tailoring history.');
           return;
         }
         this.api.createTailoring({
           job_ids: jobIds,
           profile_id: request.profile_id,
           cv_mode: request.cv_mode,
-          cover_letter: { enabled: false },
+          cover_letter: retryCoverLetter,
           output_language: request.output_language,
         }).subscribe({
           next: (process) => {
@@ -535,7 +559,7 @@ export class TailoredCvStore {
             this.submitting.set(false);
             if (!process.id || !process.result_id) {
               this.submissionUncertain.set(true);
-              this.detailError.set('The retry may have been accepted. Check CV history before retrying.');
+              this.detailError.set('The retry may have been accepted. Check tailoring history before retrying.');
               return;
             }
             this.saveProcess(process.result_id, process.id);
@@ -546,7 +570,7 @@ export class TailoredCvStore {
             console.error('Unable to retry tailoring', error);
             this.submitting.set(false);
             this.submissionUncertain.set(true);
-            this.detailError.set('Unable to confirm the retry. Check CV history before retrying.');
+            this.detailError.set('Unable to confirm the retry. Check tailoring history before retrying.');
           },
         });
       },
@@ -573,14 +597,14 @@ export class TailoredCvStore {
           this.documentLoading.set(false);
         }).catch((error: unknown) => {
           if (generation !== this.previewGeneration || owner !== (this.auth.authSession().user?.email ?? null)) return;
-          console.error('Unable to read CV preview', error);
+          console.error('Unable to read document preview', error);
           this.documentLoading.set(false);
           this.documentError.set('Unable to read the document preview. Please retry.');
         });
       },
       error: (error: unknown) => {
         if (generation !== this.previewGeneration || owner !== (this.auth.authSession().user?.email ?? null)) return;
-        console.error('Unable to retrieve CV preview', error);
+        console.error('Unable to retrieve document preview', error);
         this.documentLoading.set(false);
         this.documentError.set('Unable to retrieve the document. Please retry.');
       },
@@ -596,7 +620,7 @@ export class TailoredCvStore {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = filename || 'tailored-cv.md';
+        link.download = filename || 'tailored-document.md';
         link.click();
         setTimeout(() => URL.revokeObjectURL(url), 0);
       },
@@ -616,14 +640,14 @@ export class TailoredCvStore {
   private saveProcess(requestId: string, processId: string): void {
     const key = this.storageKey(requestId);
     if (!key) {
-      this.trackingWarning.set('Processing status may be unavailable after a reload; use CV history to check the request.');
+      this.trackingWarning.set('Processing status may be unavailable after a reload; use tailoring history to check the request.');
       return;
     }
     try {
       localStorage.setItem(key, processId);
     } catch (error: unknown) {
       console.error('Unable to save tailoring process identifier', error);
-      this.trackingWarning.set('Processing status may be unavailable after a reload; use CV history to check the request.');
+      this.trackingWarning.set('Processing status may be unavailable after a reload; use tailoring history to check the request.');
     }
   }
 
@@ -649,6 +673,10 @@ export class TailoredCvStore {
 
 function isNonEmpty(value: string | undefined | null): value is string {
   return typeof value === 'string' && value.length > 0;
+}
+
+function isTailoringMode(value: unknown): value is TailoringMode {
+  return value === 'per_job' || value === 'general';
 }
 
 function hasProfileData(data: Record<string, unknown> | null): boolean {

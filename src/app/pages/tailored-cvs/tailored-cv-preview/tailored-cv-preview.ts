@@ -1,4 +1,4 @@
-import { Component, DestroyRef, effect, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TipApi } from '../../../core/api/tip-api';
@@ -22,6 +22,9 @@ export class TailoredCvPreview {
   protected readonly requestId = this.route.snapshot.paramMap.get('id') ?? '';
   protected readonly documentId = this.route.snapshot.paramMap.get('documentId') ?? '';
   protected readonly document = signal<TailoredDocument | null>(null);
+  protected readonly documentLabel = computed(() =>
+    this.document()?.kind === 'cover_letter' ? 'Cover letter' : this.document() ? 'CV' : 'Document',
+  );
   protected readonly contextError = signal<string | null>(null);
   protected readonly contextLoading = signal(true);
   protected readonly jobIds = signal<string[]>([]);
@@ -33,7 +36,7 @@ export class TailoredCvPreview {
         this.document.set(null);
         this.profileId.set('');
         this.jobIds.set([]);
-        this.contextError.set('Please sign in again to view this CV.');
+        this.contextError.set('Please sign in again to view this document.');
       }
     });
     this.load();
@@ -48,10 +51,10 @@ export class TailoredCvPreview {
         if ((this.auth.authSession().user?.email ?? null) !== this.owner) return;
         this.contextLoading.set(false);
         const document = request.id === this.requestId && request.documents?.find((item) =>
-          item.id === this.documentId && item.kind === 'cv' && item.status === 'completed',
+          item.id === this.documentId && item.status === 'completed',
         );
         if (!document) {
-          this.contextError.set('This CV is not available in the selected request.');
+          this.contextError.set('This document is not available in the selected request.');
           return;
         }
         this.document.set(document);
@@ -61,7 +64,7 @@ export class TailoredCvPreview {
       },
       error: (error: unknown) => {
         if ((this.auth.authSession().user?.email ?? null) !== this.owner) return;
-        console.error('Unable to load CV context', error);
+        console.error('Unable to load document context', error);
         this.contextLoading.set(false);
         this.contextError.set('Unable to load the request. Please retry.');
       },

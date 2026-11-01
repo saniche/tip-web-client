@@ -49,6 +49,24 @@ describe('Tailoring API', () => {
     create.flush({ id: 'process', status: 'pending', result_id: 'request' });
   });
 
+  it('passes each cover-letter mode independently from the CV mode', () => {
+    for (const cvMode of ['per_job', 'general'] as const) {
+      for (const letterMode of ['per_job', 'general'] as const) {
+        const body = {
+          job_ids: ['job-1', 'job-2'],
+          profile_id: 'profile-123',
+          cv_mode: cvMode,
+          cover_letter: { enabled: true as const, mode: letterMode },
+          output_language: 'English',
+        };
+        api.createTailoring(body).subscribe();
+        const create = http.expectOne(`${environment.baseUrl}/tailoring`);
+        expect(create.request.body).toEqual(body);
+        create.flush({ id: 'process', status: 'pending', result_id: 'request' });
+      }
+    }
+  });
+
   it('preserves unknown processing states and uses authenticated document routes', () => {
     let status = '';
     api.getTailoringProcess('process/1').subscribe((value) => (status = value.status));

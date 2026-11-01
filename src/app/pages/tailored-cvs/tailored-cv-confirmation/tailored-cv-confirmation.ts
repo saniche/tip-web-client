@@ -14,6 +14,8 @@ export class TailoredCvConfirmation {
   readonly jobs = input.required<TailoringReviewJob[]>();
   readonly profile = input.required<string>();
   readonly mode = input.required<TailoringMode>();
+  readonly coverLetterEnabled = input(false);
+  readonly coverLetterMode = input<TailoringMode>('per_job');
   readonly language = input.required<string>();
   readonly busy = input(false);
   readonly canConfirm = input(false);

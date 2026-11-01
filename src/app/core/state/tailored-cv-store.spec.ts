@@ -272,6 +272,99 @@ describe('TailoredCvStore', () => {
     expect(api.createTailoring).not.toHaveBeenCalled();
   });
 
+  it('retries failed letters with their original mode and rejects partial requests', () => {
+    api.createTailoring.mockReturnValue(of({
+      id: 'retry-process',
+      result_id: 'retry-request',
+      status: 'pending',
+    }));
+    store.detail.set({
+      id: 'request',
+      status: 'failed',
+      error: 'Failed',
+      job_ids: ['job-1'],
+      profile_id: 'report-profile',
+      cv_mode: 'general',
+      cover_letter: { enabled: true, mode: 'per_job' },
+      output_language: 'French',
+      created_at: '',
+    });
+
+    store.retryFailed(['job-1']);
+
+    expect(api.createTailoring).toHaveBeenCalledWith({
+      job_ids: ['job-1'],
+      profile_id: 'report-profile',
+      cv_mode: 'general',
+      cover_letter: { enabled: true, mode: 'per_job' },
+      output_language: 'French',
+    });
+
+    store.detail.set({
+      id: 'partial-request',
+      status: 'partial',
+      error: null,
+      job_ids: ['job-1'],
+      profile_id: 'report-profile',
+      cv_mode: 'general',
+      cover_letter: { enabled: true, mode: 'per_job' },
+      output_language: 'French',
+      created_at: '',
+    });
+    store.retryFailed(['job-1']);
+    expect(api.createTailoring).toHaveBeenCalledTimes(1);
+  });
+
+  it('defaults letters off and submits the independent letter mode once', () => {
+    api.createTailoring.mockReturnValue(new Subject<TailoringProcess>());
+    store.loadSetup('job', 'job-1');
+    expect(store.coverLetterEnabled()).toBe(false);
+    store.coverLetterEnabled.set(true);
+    store.coverLetterMode.set('general');
+    store.mode.set('per_job');
+    store.language.set('Spanish');
+
+    store.submit();
+    store.submit();
+
+    expect(api.createTailoring).toHaveBeenCalledTimes(1);
+    expect(api.createTailoring).toHaveBeenCalledWith({
+      job_ids: ['job-1'],
+      profile_id: 'default-profile',
+      cv_mode: 'per_job',
+      cover_letter: { enabled: true, mode: 'general' },
+      output_language: 'Spanish',
+    });
+  });
+
+  it('loads document details for failed history requests without hiding successful letters', () => {
+    const request = {
+      id: 'request-failed',
+      status: 'failed',
+      job_ids: ['job-1', 'job-2'],
+      profile_id: 'default-profile',
+      cv_mode: 'general',
+      cover_letter: { enabled: true, mode: 'per_job' },
+      output_language: 'English',
+      created_at: '',
+    };
+    const detail = {
+      ...request,
+      documents: [
+        { id: 'cv-1', kind: 'cv', filename: 'cv.docx', status: 'completed', job_ids: ['job-1', 'job-2'] },
+        { id: 'letter-1', kind: 'cover_letter', filename: 'letter.docx', status: 'completed', job_ids: ['job-1'] },
+      ],
+    };
+    api.listTailoringRequests.mockReturnValue(of([request]));
+    api.getTailoringRequest.mockReturnValue(of(detail));
+
+    store.loadHistory();
+
+    expect(api.getTailoringRequest).toHaveBeenCalledWith('request-failed');
+    expect(store.requests()[0].documents).toEqual(detail.documents);
+    expect(store.historyLoading()).toBe(false);
+  });
+
   it('retains the last confirmed processing state on an unknown response', () => {
     vi.useFakeTimers();
     localStorage.setItem('tip.tailoring.process.test%40example.test.request', 'process');
