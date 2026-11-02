@@ -1,0 +1,90 @@
+<section
+  class="normalized-job-process-actions__group"
+  role="group"
+  aria-labelledby="job-process-actions"
+>
+  <h2 id="job-process-actions">Process</h2>
+  <div class="btn-group-vertical">
+    <button
+      class="btn btn-outline-primary"
+      type="button"
+      (click)="addToMatchingSession()"
+      [disabled]="busy()"
+    >
+      Add to matching session
+    </button>
+    @if (!isApplied()) {
+      <button
+        class="btn btn-outline-success"
+        type="button"
+        (click)="openApplicationDialog()"
+        [disabled]="applicationSubmitting()"
+      >
+        Application
+      </button>
+    }
+    @if (job().status.toLowerCase() === 'completed') {
+      <button
+        class="btn btn-outline-primary"
+        type="button"
+        (click)="addToTailoring()"
+        [disabled]="busy()"
+      >
+        Add to tailoring
+      </button>
+      <a class="btn btn-outline-secondary" routerLink="/tailoring-session">
+        View tailoring session
+      </a>
+    }
+  </div>
+</section>
+
+<dialog
+  #applicationDialog
+  class="normalized-job-process-actions__application-dialog"
+  aria-labelledby="application-dialog-title"
+  aria-modal="true"
+  (cancel)="handleDialogCancel($event)"
+>
+  <div class="normalized-job-process-actions__application-content">
+    <h2 id="application-dialog-title" class="h5">Track application</h2>
+    <form [formGroup]="applicationForm" (submit)="$event.preventDefault(); submitApplication()">
+      <div class="mb-3">
+        <label class="form-label" for="application-status">Status</label>
+        <select
+          class="form-select"
+          id="application-status"
+          formControlName="status"
+          [disabled]="applicationSubmitting()"
+        >
+          @for (status of applicationStatuses; track status) {
+            <option [value]="status">{{ applicationStatusLabel(status) }}</option>
+          }
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="application-notes">Notes</label>
+        <textarea
+          class="form-control"
+          id="application-notes"
+          rows="3"
+          formControlName="notes"
+          [disabled]="applicationSubmitting()"
+        ></textarea>
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-primary" type="submit" [disabled]="applicationSubmitting()">
+          {{ applicationSubmitting() ? 'Saving…' : 'Save application' }}
+        </button>
+        <button
+          class="btn btn-outline-secondary"
+          type="button"
+          (click)="closeApplicationDialog()"
+          [disabled]="applicationSubmitting()"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>

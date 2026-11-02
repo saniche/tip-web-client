@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { toast } from 'ngx-sonner';
 import { TipApi } from '../../core/api/tip-api';
 import { NormalizedJobDetail as JobDetail } from '../../core/models/normalized-job';
+import { MatchingStore } from '../../core/state/matching-store';
 import { TailoredCvStore } from '../../core/state/tailored-cv-store';
 import { AddTailoringJobResult } from '../../core/state/tailoring-store';
 import { NormalizedJobDetail } from './normalized-job-detail';
@@ -14,10 +15,26 @@ vi.mock('ngx-sonner', () => ({
 }));
 
 const job: JobDetail = {
-  id: 'job-1', title: 'Engineer', company: null, location: null, url: null, salary: null,
-  source: null, postingDate: null, summary: null, keyResponsibilities: null, requirements: null,
-  desirables: null, toolsAndTechnologies: null, additionals: null, status: 'completed',
-  submitterId: null, createdAt: null, hasWriteAccess: false, isInterested: false, isApplied: false,
+  id: 'job-1',
+  title: 'Engineer',
+  company: null,
+  location: null,
+  url: null,
+  salary: null,
+  source: null,
+  postingDate: null,
+  summary: null,
+  keyResponsibilities: null,
+  requirements: null,
+  desirables: null,
+  toolsAndTechnologies: null,
+  additionals: null,
+  status: 'completed',
+  submitterId: null,
+  createdAt: null,
+  hasWriteAccess: false,
+  isInterested: false,
+  isApplied: false,
 };
 
 describe('Normalized job tailoring action', () => {
@@ -32,8 +49,12 @@ describe('Normalized job tailoring action', () => {
       imports: [NormalizedJobDetail],
       providers: [
         provideRouter([]),
-        { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: selectedJob.id })) } },
+        {
+          provide: ActivatedRoute,
+          useValue: { paramMap: of(convertToParamMap({ id: selectedJob.id })) },
+        },
         { provide: TipApi, useValue: { getNormalizedJob: () => of(selectedJob) } },
+        { provide: MatchingStore, useValue: { addJob: vi.fn(() => true) } },
         { provide: TailoredCvStore, useValue: { addJobFromDetail } },
       ],
     }).compileComponents();
@@ -48,8 +69,9 @@ describe('Normalized job tailoring action', () => {
   it('adds the current job without navigation and provides a separate session link', async () => {
     const { fixture, addJobFromDetail, navigate, navigateByUrl } = await render('added');
     const page = fixture.nativeElement as HTMLElement;
-    const button = Array.from(page.querySelectorAll('button'))
-      .find((item) => item.textContent?.includes('Add to tailoring'));
+    const button = Array.from(page.querySelectorAll('button')).find((item) =>
+      item.textContent?.includes('Add to tailoring'),
+    );
     expect(button).toBeTruthy();
     button!.click();
     expect(addJobFromDetail).toHaveBeenCalledWith(job);
@@ -71,8 +93,9 @@ describe('Normalized job tailoring action', () => {
     ['added-not-saved', 'warning'],
   ] as const)('reports %s without a success toast', async (result, notification) => {
     const { fixture } = await render(result);
-    const button = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button'))
-      .find((item) => item.textContent?.includes('Add to tailoring'));
+    const button = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('button'),
+    ).find((item) => item.textContent?.includes('Add to tailoring'));
     button!.click();
     expect(toast[notification]).toHaveBeenCalledOnce();
     expect(toast.success).not.toHaveBeenCalled();

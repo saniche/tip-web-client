@@ -4,6 +4,7 @@ import { BehaviorSubject, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TipApi } from '../../core/api/tip-api';
 import { NormalizedJobDetail as JobDetail } from '../../core/models/normalized-job';
+import { MatchingStore } from '../../core/state/matching-store';
 import { TailoredCvStore } from '../../core/state/tailored-cv-store';
 import { NormalizedJobDetail } from './normalized-job-detail';
 
@@ -38,7 +39,10 @@ describe('NormalizedJobDetail', () => {
     deleteNormalizedJob: ReturnType<typeof vi.fn>;
     addInterest: ReturnType<typeof vi.fn>;
     removeInterest: ReturnType<typeof vi.fn>;
+    createApplication: ReturnType<typeof vi.fn>;
+    updateApplicationStatus: ReturnType<typeof vi.fn>;
   };
+  let matchingStore: { addJob: ReturnType<typeof vi.fn> };
   let router: { navigateByUrl: ReturnType<typeof vi.fn> };
   let params: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
 
@@ -49,7 +53,10 @@ describe('NormalizedJobDetail', () => {
       deleteNormalizedJob: vi.fn(() => of(undefined)),
       addInterest: vi.fn(() => of(undefined)),
       removeInterest: vi.fn(() => of(undefined)),
+      createApplication: vi.fn(() => of({ id: 'application-1', status: 'NotStarted' })),
+      updateApplicationStatus: vi.fn(() => of(undefined)),
     };
+    matchingStore = { addJob: vi.fn(() => true) };
     router = { navigateByUrl: vi.fn().mockResolvedValue(true) };
     params = new BehaviorSubject(convertToParamMap({ id: 'job-1' }));
 
@@ -58,6 +65,7 @@ describe('NormalizedJobDetail', () => {
       providers: [
         { provide: TipApi, useValue: api },
         { provide: TailoredCvStore, useValue: { addJobFromDetail: vi.fn(() => 'added') } },
+        { provide: MatchingStore, useValue: matchingStore },
         { provide: Router, useValue: router },
         { provide: ActivatedRoute, useValue: { paramMap: params.asObservable() } },
       ],
@@ -267,6 +275,17 @@ describe('NormalizedJobDetail', () => {
     button('Interest status unavailable').click();
     expect(api.addInterest).not.toHaveBeenCalled();
     expect(api.removeInterest).not.toHaveBeenCalled();
+  });
+
+  it('renders the Management and Process action groups', () => {
+    render();
+
+    expect(
+      root().querySelector('[aria-labelledby="job-management-actions"]')?.textContent,
+    ).toContain('Management');
+    expect(root().querySelector('[aria-labelledby="job-process-actions"]')?.textContent).toContain(
+      'Process',
+    );
   });
 
   it('displays an error message when interest toggle fails', () => {

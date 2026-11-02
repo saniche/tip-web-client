@@ -35,66 +35,66 @@
         </div>
       </div>
       <div class="normalized-job-detail__actions">
-        
-        <div class="btn-group-vertical" role="group" aria-label="Button group with nested dropdown">
+        <section
+          class="normalized-job-detail__action-group"
+          role="group"
+          aria-labelledby="job-management-actions"
+        >
+          <h2 id="job-management-actions">Management</h2>
+          <div class="btn-group-vertical">
+            @if (job.hasWriteAccess) {
+              @if (!editMode() && state() !== 'delete-confirmation' && state() !== 'deleting') {
+                <button class="btn btn-outline-primary" type="button" (click)="toggleEditMode()">
+                  Edit header
+                </button>
+                <button class="btn btn-outline-danger" type="button" (click)="requestDelete()">
+                  Delete job
+                </button>
+              }
+            }
+            @if (!isApplied()) {
+              @if (interestLoading()) {
+                <button class="btn btn-outline-secondary" type="button" disabled>
+                  <span
+                    class="spinner-border spinner-border-sm"
+                    role="status"
+                    aria-hidden="true"
+                  ></span>
+                  Updating interest…
+                </button>
+              } @else if (isInterested() === null) {
+                <button class="btn btn-outline-secondary" type="button" disabled>
+                  Interest status unavailable
+                </button>
+              } @else if (isInterested()) {
+                <button
+                  class="btn btn-outline-warning"
+                  type="button"
+                  (click)="toggleInterest()"
+                  [disabled]="state() === 'deleting' || state() === 'saving'"
+                >
+                  Remove from interests
+                </button>
+              } @else {
+                <button
+                  class="btn btn-outline-success"
+                  type="button"
+                  (click)="toggleInterest()"
+                  [disabled]="state() === 'deleting' || state() === 'saving'"
+                >
+                  Add to interests
+                </button>
+              }
+            }
+          </div>
+        </section>
 
-        @if (job.status.toLowerCase() === 'completed') {
-          <button type="button" class="btn btn-outline-secondary">Evaluate Matching (Not yet)</button>
-          <button class="btn btn-outline-primary" type="button" (click)="addToTailoring(job)"
-            [disabled]="state() === 'deleting' || state() === 'saving'">Add to tailoring</button>
-          <a class="btn btn-outline-secondary" routerLink="/tailoring-session">View tailoring session</a>
-        }
-        @if (!isApplied()) {
-          <button class="btn btn-outline-success" type="button" disabled>
-            Apply (Feature not yet available)
-          </button>
-
-          @if (interestLoading()) {
-            <button class="btn btn-outline-secondary" type="button" disabled>
-              <span
-                class="spinner-border spinner-border-sm"
-                role="status"
-                aria-hidden="true"
-              ></span>
-              Updating interest…
-            </button>
-          } @else if (isInterested() === null) {
-            <button class="btn btn-outline-secondary" type="button" disabled>
-              Interest status unavailable
-            </button>
-          } @else if (isInterested()) {
-            <button
-              class="btn btn-outline-warning"
-              type="button"
-              (click)="toggleInterest()"
-              [disabled]="state() === 'deleting' || state() === 'saving'"
-            >
-              Remove from interests
-            </button>
-          } @else {
-            <button
-              class="btn btn-outline-success"
-              type="button"
-              (click)="toggleInterest()"
-              [disabled]="state() === 'deleting' || state() === 'saving'"
-            >
-              Add to interests
-            </button>
-          }
-        }
-
-        @if (job.hasWriteAccess) {
-          @if (!editMode() && state() !== 'delete-confirmation' && state() !== 'deleting') {
-            <button class="btn btn-outline-primary" type="button" (click)="toggleEditMode()">
-              Edit header
-            </button>
-            <button class="btn btn-outline-danger" type="button" (click)="requestDelete()">
-              Delete job
-            </button>
-          }
-        }
-        </div>
-
+        <app-normalized-job-process-actions
+          [job]="job"
+          [isApplied]="isApplied()"
+          [busy]="state() === 'deleting' || state() === 'saving'"
+          (applicationTracked)="markApplicationTracked()"
+        />
       </div>
     </header>
 

@@ -17,6 +17,25 @@
   margin-bottom: 2rem;
 }
 
+.normalized-job-detail__actions {
+  display: grid;
+  gap: 1rem;
+  min-width: 13rem;
+}
+
+.normalized-job-detail__action-group h2 {
+  margin-bottom: 0.4rem;
+  color: var(--bs-secondary-color);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.normalized-job-detail__action-group .btn-group-vertical {
+  width: 100%;
+}
+
 .normalized-job-detail__kicker {
   margin-bottom: 0.35rem;
   color: var(--bs-primary);
@@ -110,5 +129,10 @@
 @media (max-width: 576px) {
   .normalized-job-detail__header {
     flex-direction: column;
+  }
+
+  .normalized-job-detail__actions {
+    width: 100%;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
   }
 }
