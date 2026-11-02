@@ -3,9 +3,13 @@ import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 import { LocalAuthStore } from '../state/local-auth-store';
+import { environment } from '../../../environments/environment';
 
 export const authInterceptor: HttpInterceptorFn = (request, next) => {
-  if (request.url.includes('/auth/login') || request.url.includes('/auth/register')) {
+  const apiBase = environment.baseUrl.replace(/\/$/, '');
+  const isApiRequest = request.url === apiBase || request.url.startsWith(`${apiBase}/`);
+  if (!isApiRequest || request.url.startsWith(`${apiBase}/auth/login`) ||
+      request.url.startsWith(`${apiBase}/auth/register`)) {
     return next(request);
   }
 
@@ -25,7 +29,8 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
       if (
         error instanceof HttpErrorResponse &&
         error.status === 401 &&
-        isInterestRequest(request.url)
+        !!token &&
+        authStore.token() === token
       ) {
         authStore.logout();
         const returnUrl = encodeURIComponent(router.url);
@@ -36,7 +41,3 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
     }),
   );
 };
-
-function isInterestRequest(url: string): boolean {
-  return url.includes('/jobs/interests') || /\/jobs\/[^/?]+\/interest(?:[/?]|$)/.test(url);
-}

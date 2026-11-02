@@ -5,7 +5,8 @@ import { BehaviorSubject, Observable, of, Subject, Subscriber, throwError } from
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TipApi } from '../../core/api/tip-api';
 import { JobInterest, JobInterestsPage } from '../../core/models/interest';
-import { MatchingStore, MATCHING_SESSION_STORAGE_KEY } from '../../core/state/matching-store';
+import { MatchingStore } from '../../core/state/matching-store';
+import { AuthStore } from '../../core/state/auth-store';
 import { Interests } from './interests';
 
 const mockInterests: JobInterest[] = [
@@ -54,7 +55,12 @@ describe('Interests Component', () => {
   let queryParams: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
 
   beforeEach(async () => {
-    sessionStorage.removeItem(MATCHING_SESSION_STORAGE_KEY);
+    const records = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => records.get(key) ?? null,
+      setItem: (key: string, value: string) => records.set(key, value),
+      removeItem: (key: string) => records.delete(key),
+    });
     api = {
       listInterests: vi.fn(() => of(mockPage)),
       removeInterest: vi.fn(() => of(undefined)),
@@ -66,6 +72,7 @@ describe('Interests Component', () => {
       providers: [
         provideRouter([]),
         { provide: TipApi, useValue: api },
+        { provide: AuthStore, useValue: { authSession: () => ({ token: 'token', user: { email: 'test@example.test' } }) } },
         {
           provide: ActivatedRoute,
           useValue: {
@@ -83,6 +90,7 @@ describe('Interests Component', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllGlobals();
   });
 
   function render(): ComponentFixture<Interests> {

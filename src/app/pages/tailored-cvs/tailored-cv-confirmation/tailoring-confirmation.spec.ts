@@ -61,7 +61,7 @@ describe('Tailoring confirmation', () => {
       providers: [
         provideRouter([]),
         { provide: TipApi, useValue: api },
-        { provide: AuthStore, useValue: { authSession: () => ({ user: { email: 'test@example.test' } }) } },
+        { provide: AuthStore, useValue: { authSession: () => ({ token: 'token', user: { email: 'test@example.test' } }) } },
         { provide: ActivatedRoute, useValue: route },
       ],
     }).compileComponents();

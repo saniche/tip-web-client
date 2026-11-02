@@ -5,6 +5,14 @@ import { TipApi } from '../api/tip-api';
 import { MatchingStore } from './matching-store';
 import { MATCHING_SESSION_STORAGE_KEY } from './matching-store';
 import { MatchingJobSelection } from '../models/matching';
+import { AuthStore } from './auth-store';
+import { writeUserStorage } from '../utils/user-storage';
+
+const owner = 'test@example.test';
+const storageKey = 'tip.user.v1.test%40example%2Etest.matching.session';
+const authProvider = { provide: AuthStore, useValue: {
+  authSession: () => ({ token: 'token', user: { email: owner } }),
+} };
 
 describe('MatchingStore', () => {
   let store: MatchingStore;
@@ -18,19 +26,24 @@ describe('MatchingStore', () => {
   };
 
   beforeEach(() => {
-    sessionStorage.removeItem(MATCHING_SESSION_STORAGE_KEY);
+    const records = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => records.get(key) ?? null,
+      setItem: (key: string, value: string) => records.set(key, value),
+      removeItem: (key: string) => records.delete(key),
+    });
     api = {
       getProfile: vi.fn(() =>
         of({ id: 'profile-1', user_id: 'user-1', data: {}, output_language: 'English' }),
       ),
-      listInterests: vi.fn(() => of(interestPage([]))),
+      listInterests: vi.fn(() => of(interestPage([{ id: 'interest-1', jobId: 'job-1' }]))),
       addInterest: vi.fn(() => of(undefined)),
       submitMatching: vi.fn(() => of(processResponse('done'))),
       getMatchingProcess: vi.fn(() => of(processResponse('done'))),
       getMatchingReport: vi.fn(() => of(reportResponse())),
     };
     TestBed.configureTestingModule({
-      providers: [MatchingStore, { provide: TipApi, useValue: api }],
+      providers: [MatchingStore, { provide: TipApi, useValue: api }, authProvider],
     });
     store = TestBed.inject(MatchingStore);
   });
@@ -38,7 +51,7 @@ describe('MatchingStore', () => {
   afterEach(() => {
     store.stopTracking();
     TestBed.resetTestingModule();
-    sessionStorage.removeItem(MATCHING_SESSION_STORAGE_KEY);
+    vi.unstubAllGlobals();
     vi.useRealTimers();
   });
 
@@ -77,13 +90,13 @@ describe('MatchingStore', () => {
     expect(store.removeJob('missing')).toBe(false);
   });
 
-  it('restores a valid open session from sessionStorage', () => {
+  it('restores a valid open user session from storage', () => {
     store.addJob(selection('job-1', 'normalized-jobs'));
     const savedId = store.session()?.id;
 
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
-      providers: [MatchingStore, { provide: TipApi, useValue: api }],
+      providers: [MatchingStore, { provide: TipApi, useValue: api }, authProvider],
     });
     store = TestBed.inject(MatchingStore);
 
@@ -93,18 +106,18 @@ describe('MatchingStore', () => {
 
   it('migrates a previously stored unknown process status into the recovery field', () => {
     store.addJob(selection('job-1', 'normalized-jobs'));
-    const stored = sessionStorage.getItem(MATCHING_SESSION_STORAGE_KEY);
+    const stored = localStorage.getItem(storageKey);
     if (!stored) {
       throw new Error('Expected a persisted matching session.');
     }
-    const savedSession = JSON.parse(stored) as Record<string, unknown>;
+    const savedSession = (JSON.parse(stored) as { data: Record<string, unknown> }).data;
     savedSession['lastConfirmedStatus'] = 'queued-by-server';
     delete savedSession['unrecognizedStatus'];
-    sessionStorage.setItem(MATCHING_SESSION_STORAGE_KEY, JSON.stringify(savedSession));
+    writeUserStorage(owner, MATCHING_SESSION_STORAGE_KEY, savedSession);
 
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
-      providers: [MatchingStore, { provide: TipApi, useValue: api }],
+      providers: [MatchingStore, { provide: TipApi, useValue: api }, authProvider],
     });
     store = TestBed.inject(MatchingStore);
 
@@ -123,7 +136,7 @@ describe('MatchingStore', () => {
     store.requestDiscard();
     expect(store.confirmDiscard()).toBe(true);
     expect(store.session()).toBeNull();
-    expect(sessionStorage.getItem(MATCHING_SESSION_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(storageKey)).toBeNull();
   });
 
   it('prevents editing or discarding after the session is locked for submission', () => {
@@ -180,6 +193,7 @@ describe('MatchingStore', () => {
   });
 
   it('does not submit when every interest addition fails', () => {
+    api.listInterests.mockReturnValue(of(interestPage([])));
     api.addInterest.mockReturnValue(throwError(() => new Error('denied')));
     store.addJob(selection('job-1', 'normalized-jobs'));
 
@@ -305,7 +319,7 @@ describe('MatchingStore', () => {
     TestBed.resetTestingModule();
     api.getMatchingProcess.mockReturnValue(of(processResponse('done')));
     TestBed.configureTestingModule({
-      providers: [MatchingStore, { provide: TipApi, useValue: api }],
+      providers: [MatchingStore, { provide: TipApi, useValue: api }, authProvider],
     });
     store = TestBed.inject(MatchingStore);
     await vi.advanceTimersByTimeAsync(0);
@@ -370,9 +384,9 @@ describe('MatchingStore', () => {
   it('surfaces invalid persisted session data instead of silently restoring it', () => {
     store.stopTracking();
     TestBed.resetTestingModule();
-    sessionStorage.setItem(MATCHING_SESSION_STORAGE_KEY, JSON.stringify({ id: 'incomplete' }));
+    writeUserStorage(owner, MATCHING_SESSION_STORAGE_KEY, { id: 'incomplete' });
     TestBed.configureTestingModule({
-      providers: [MatchingStore, { provide: TipApi, useValue: api }],
+      providers: [MatchingStore, { provide: TipApi, useValue: api }, authProvider],
     });
     store = TestBed.inject(MatchingStore);
 

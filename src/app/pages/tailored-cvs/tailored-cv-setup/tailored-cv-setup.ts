@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink } from '@angular/router';
@@ -43,6 +43,7 @@ export class TailoredCvSetup {
   });
 
   constructor() {
+    this.store.restoreDraft();
     this.readLaunch();
     this.router.events.pipe(
       filter((event) => event instanceof NavigationEnd),
@@ -52,6 +53,15 @@ export class TailoredCvSetup {
       const launch = this.pendingLaunch();
       if (!launch || this.store.loading() || this.store.addingJob()) return;
       this.pendingLaunch.set(null);
+      const sessionStatus = this.store.sessionCoordinator.session.status();
+      if (sessionStatus === 'processing' || sessionStatus === 'submitting') {
+        if (launch.source === 'report') {
+          this.store.sessionCoordinator.queueReport(launch.id);
+        } else {
+          this.launchError.set('Jobs cannot be added while a tailoring request is running.');
+        }
+        return;
+      }
       if (this.store.submitting() || this.store.submissionUncertain() || this.store.accepted()) {
         this.launchError.set('The previous submission is not confirmed. Check tailoring history before starting another session.');
         return;
@@ -68,6 +78,13 @@ export class TailoredCvSetup {
       } else if (source !== 'report' || launch.source !== 'report' ||
           this.store.sessionSourceId() !== launch.id) {
         this.pendingReplacement.set(launch);
+      }
+    });
+    effect(() => {
+      const session = this.store.sessionCoordinator.session.session();
+      if (session.status === 'open' && session.source && !this.store.sessionSource() &&
+          !this.store.loading() && !this.pendingLaunch()) {
+        untracked(() => this.store.restoreDraft());
       }
     });
     effect(() => {

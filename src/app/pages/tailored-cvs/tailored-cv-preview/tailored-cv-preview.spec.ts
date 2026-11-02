@@ -42,7 +42,7 @@ describe('TailoredCvPreview', () => {
         },
         { provide: TipApi, useValue: api },
         { provide: TailoredCvStore, useValue: store },
-        { provide: AuthStore, useValue: { authSession: () => ({ user: { email: 'test@example.test' } }) } },
+        { provide: AuthStore, useValue: { authSession: () => ({ token: 'token', user: { email: 'test@example.test' } }) } },
       ],
     }).compileComponents();
 

@@ -1,32 +1,40 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
-import { Observable, Subscription, catchError, exhaustMap, forkJoin, map, of, timer } from 'rxjs';
+import { catchError, forkJoin, of } from 'rxjs';
 import { TipApi } from '../api/tip-api';
 import { NormalizedJobDetail } from '../models/normalized-job';
 import { AuthStore } from './auth-store';
+import { hasProfileData } from '../utils/profile-data';
+import { TailoredContentManager } from '../utils/tailored-content-manager';
+import { TailoringRequestTracker } from './tailoring-request-tracker';
+import { TailoringHistoryStore } from './tailoring-history-store';
+import { TailoringSubmission } from './tailoring-submission';
+import { TailoringSessionCoordinator } from './tailoring-session-coordinator';
+import { AddTailoringJobResult } from './tailoring-store';
 import {
   ProfileVersion,
-  CoverLetterOptions,
   TailoringMode,
-  TailoringProcess,
-  TailoringRequest,
 } from '../models/tailored-cv';
 
 @Injectable({ providedIn: 'root' })
 export class TailoredCvStore {
   private readonly api = inject(TipApi);
   private readonly auth = inject(AuthStore);
+  private readonly content = inject(TailoredContentManager);
+  private readonly tracker = inject(TailoringRequestTracker);
+  private readonly history = inject(TailoringHistoryStore);
+  private readonly submission = inject(TailoringSubmission);
+  readonly sessionCoordinator = inject(TailoringSessionCoordinator);
   private owner = this.auth.authSession().user?.email ?? null;
+  private ownerToken = this.auth.authSession().token ?? null;
   private generation = 0;
-  private previewGeneration = 0;
-  private tracking?: Subscription;
   readonly loading = signal(false);
   readonly addingJob = signal(false);
   readonly failedJobId = signal<string | null>(null);
   readonly sessionSource = signal<'job' | 'report' | null>(null);
   readonly sessionSourceId = signal('');
-  readonly submitting = signal(false);
+  readonly submitting = this.submission.submitting;
   readonly profileLoading = signal(false);
-  readonly error = signal<string | null>(null);
+  readonly error = this.submission.error;
   readonly warning = signal<string | null>(null);
   readonly profiles = signal<ProfileVersion[]>([]);
   readonly jobs = signal<NormalizedJobDetail[]>([]);
@@ -39,20 +47,20 @@ export class TailoredCvStore {
   readonly coverLetterEnabled = signal(false);
   readonly coverLetterMode = signal<TailoringMode>('per_job');
   readonly language = signal('');
-  readonly requests = signal<TailoringRequest[]>([]);
-  readonly accepted = signal<TailoringProcess | null>(null);
-  readonly submissionUncertain = signal(false);
-  readonly detail = signal<TailoringRequest | null>(null);
-  readonly process = signal<TailoringProcess | null>(null);
-  readonly detailLoading = signal(false);
-  readonly detailError = signal<string | null>(null);
-  readonly trackingWarning = signal<string | null>(null);
-  readonly historyLoading = signal(false);
-  readonly historyError = signal<string | null>(null);
-  readonly historyDocumentErrors = signal<string[]>([]);
-  readonly documentError = signal<string | null>(null);
-  readonly documentLoading = signal(false);
-  readonly preview = signal<string | null>(null);
+  readonly requests = this.history.requests;
+  readonly accepted = this.submission.accepted;
+  readonly submissionUncertain = this.submission.submissionUncertain;
+  readonly detail = this.tracker.detail;
+  readonly process = this.tracker.process;
+  readonly detailLoading = this.tracker.detailLoading;
+  readonly detailError = this.tracker.detailError;
+  readonly trackingWarning = this.tracker.trackingWarning;
+  readonly historyLoading = this.history.historyLoading;
+  readonly historyError = this.history.historyError;
+  readonly historyDocumentErrors = this.history.historyDocumentErrors;
+  readonly documentError = this.content.documentError;
+  readonly documentLoading = this.content.documentLoading;
+  readonly preview = this.content.preview;
   readonly activeRequest = computed(() => {
     const profileId = this.profileId();
     const ids = [...this.selectedJobIds()].sort();
@@ -66,6 +74,7 @@ export class TailoredCvStore {
   readonly canSubmit = computed(() =>
     !this.loading() && !this.addingJob() && !this.profileLoading() && !this.submitting() &&
     !this.accepted() && !this.submissionUncertain() && !this.activeRequest() && this.profileReady() &&
+    this.sessionCoordinator.session.status() === 'open' &&
     this.selectedJobIds().length > 0 && this.selectedJobIds().length <= 10 &&
     !!this.profileId() && !!this.language().trim() &&
     (!this.reportSource() || this.reportProfileId() === this.profileId()),
@@ -73,12 +82,23 @@ export class TailoredCvStore {
 
   constructor() {
     effect(() => {
+      if (this.sessionCoordinator.session.status() === 'submitting' &&
+          !this.submitting() && !this.submissionUncertain()) {
+        this.submissionUncertain.set(true);
+        this.error.set('The submission response was interrupted. Check tailoring history before retrying.');
+      }
+    });
+    effect(() => {
       const owner = this.auth.authSession().user?.email ?? null;
-      if (owner === this.owner) return;
+      const authToken = this.auth.authSession().token ?? null;
+      if (owner === this.owner && authToken === this.ownerToken) return;
       this.owner = owner;
+      this.ownerToken = authToken;
       this.generation++;
-      this.previewGeneration++;
-      this.stopTracking();
+      this.content.reset();
+      this.tracker.reset();
+      this.history.reset();
+      this.submission.reset();
       this.loading.set(false);
       this.addingJob.set(false);
       this.failedJobId.set(null);
@@ -86,36 +106,27 @@ export class TailoredCvStore {
       this.sessionSourceId.set('');
       this.submitting.set(false);
       this.profileLoading.set(false);
-      this.historyLoading.set(false);
-      this.detailLoading.set(false);
-      this.documentLoading.set(false);
       this.profiles.set([]);
       this.jobs.set([]);
       this.selectedJobIds.set([]);
       this.profileId.set('');
       this.profileReady.set(false);
+      this.reportSource.set(false);
       this.reportProfileId.set(null);
+      this.mode.set('per_job');
       this.language.set('');
       this.coverLetterEnabled.set(false);
       this.coverLetterMode.set('per_job');
-      this.requests.set([]);
-      this.detail.set(null);
-      this.process.set(null);
-      this.preview.set(null);
       this.accepted.set(null);
       this.submissionUncertain.set(false);
       this.error.set(null);
       this.warning.set(null);
-      this.detailError.set(null);
-      this.historyError.set(null);
-      this.trackingWarning.set(null);
-      this.historyDocumentErrors.set([]);
-      this.documentError.set(null);
     });
   }
 
   discardSession(): void {
     if (this.submitting() || this.accepted()) return;
+    this.sessionCoordinator.session.discardDraft();
     this.generation++;
     this.loading.set(false);
     this.addingJob.set(false);
@@ -138,9 +149,28 @@ export class TailoredCvStore {
     this.warning.set(null);
   }
 
-  loadSetup(source: 'job' | 'report', id: string): void {
+  restoreDraft(): void {
+    if (this.sessionSource() || this.loading()) return;
+    const saved = this.sessionCoordinator.session.session();
+    if (saved.status === 'submitting') {
+      this.submissionUncertain.set(true);
+      this.error.set('The submission response was interrupted. Check tailoring history before retrying.');
+    } else if (saved.status === 'open' && saved.source) {
+      this.loadSetup(saved.source.type, saved.source.id, true);
+    }
+  }
+
+  loadSetup(source: 'job' | 'report', id: string, restore = false): void {
+    const saved = this.sessionCoordinator.session.session();
+    if (saved.status === 'submitting' || saved.status === 'processing') {
+      this.error.set('The current tailoring request is still running.');
+      return;
+    }
+    const restoredJobs = restore ? saved.jobIds : [];
+    const restoredSelection = restore ? saved.selectedJobIds : undefined;
     const generation = ++this.generation;
     const owner = this.auth.authSession().user?.email ?? null;
+    const authToken = this.auth.authSession().token ?? null;
     this.sessionSource.set(source);
     this.sessionSourceId.set(id);
     this.addingJob.set(false);
@@ -171,7 +201,7 @@ export class TailoredCvStore {
       source: source$,
     }).subscribe({
       next: ({ profiles, requests, source: reportSource }) => {
-        if (generation !== this.generation || owner !== (this.auth.authSession().user?.email ?? null)) return;
+        if (generation !== this.generation || (owner !== (this.auth.authSession().user?.email ?? null) || authToken !== (this.auth.authSession().token ?? null))) return;
         this.profiles.set(profiles);
         this.requests.set(requests);
         let jobIds: string[];
@@ -184,9 +214,11 @@ export class TailoredCvStore {
             return;
           }
           this.reportProfileId.set(summary.profileId);
-          jobIds = [...new Set(report.results.map((result) => result.jobId?.trim()).filter(isNonEmpty))];
+          jobIds = restore
+            ? [...restoredJobs]
+            : [...new Set(report.results.map((result) => result.jobId?.trim()).filter(isNonEmpty))];
         } else {
-          jobIds = id.trim() ? [id.trim()] : [];
+          jobIds = restore && restoredJobs.length ? [...restoredJobs] : id.trim() ? [id.trim()] : [];
         }
         const selectedProfile = reportSource
           ? profiles.find((profile) => profile.id === this.reportProfileId())
@@ -210,21 +242,30 @@ export class TailoredCvStore {
           }),
         ))).subscribe({
           next: (jobs) => {
-            if (generation !== this.generation || owner !== (this.auth.authSession().user?.email ?? null)) return;
+            if (generation !== this.generation || (owner !== (this.auth.authSession().user?.email ?? null) || authToken !== (this.auth.authSession().token ?? null))) return;
+            if (['submitting', 'processing'].includes(this.sessionCoordinator.session.status() ?? '')) {
+              this.loading.set(false);
+              this.error.set('The current tailoring request is still running.');
+              return;
+            }
             const available = jobs.filter((job): job is NormalizedJobDetail =>
               job !== null && jobIds.includes(job.id) && job.status.toLowerCase() === 'completed',
             );
             this.jobs.set(available);
-            this.selectedJobIds.set(source === 'job' && available.length === 1 ? [available[0].id] : []);
+            const selected = restoredSelection
+              ? restoredSelection.filter((jobId) => available.some((job) => job.id === jobId))
+              : source === 'job' && available.length === 1 ? [available[0].id] : [];
+            this.selectedJobIds.set([...selected]);
+            this.sessionCoordinator.session.setDraft({ type: source, id }, jobIds, selected);
             if (available.length !== jobIds.length) {
               this.warning.set('Some jobs are unavailable or have not completed normalization.');
             }
             this.loading.set(false);
           },
-          error: (error: unknown) => this.failLoad(error, generation),
+          error: (error: unknown) => this.failLoad(error, generation, owner, authToken),
         });
       },
-      error: (error: unknown) => this.failLoad(error, generation),
+      error: (error: unknown) => this.failLoad(error, generation, owner, authToken),
     });
   }
 
@@ -252,13 +293,14 @@ export class TailoredCvStore {
     }
     const generation = this.generation;
     const owner = this.auth.authSession().user?.email ?? null;
+    const authToken = this.auth.authSession().token ?? null;
     this.addingJob.set(true);
     this.failedJobId.set(null);
     this.error.set(null);
     this.warning.set(null);
     this.api.getNormalizedJob(id).subscribe({
       next: (job) => {
-        if (generation !== this.generation || owner !== (this.auth.authSession().user?.email ?? null)) return;
+        if (generation !== this.generation || (owner !== (this.auth.authSession().user?.email ?? null) || authToken !== (this.auth.authSession().token ?? null))) return;
         this.addingJob.set(false);
         if (job.id !== id || job.status.toLowerCase() !== 'completed') {
           this.failedJobId.set(id);
@@ -269,7 +311,7 @@ export class TailoredCvStore {
         this.toggleJob(id, true);
       },
       error: (error: unknown) => {
-        if (generation !== this.generation || owner !== (this.auth.authSession().user?.email ?? null)) return;
+        if (generation !== this.generation || (owner !== (this.auth.authSession().user?.email ?? null) || authToken !== (this.auth.authSession().token ?? null))) return;
         console.error('Unable to add tailoring job', error);
         this.addingJob.set(false);
         this.failedJobId.set(id);
@@ -278,14 +320,46 @@ export class TailoredCvStore {
     });
   }
 
+  addJobFromDetail(job: NormalizedJobDetail): AddTailoringJobResult {
+    const auth = this.auth.authSession();
+    if (!auth.token || !auth.user?.email?.trim()) return 'unauthenticated';
+    const id = job.id.trim();
+    if (!id || job.status.trim().toLowerCase() !== 'completed') return 'invalid';
+    const facadeCurrent = auth.user.email === this.owner && auth.token === this.ownerToken;
+    if (facadeCurrent && (this.loading() || this.addingJob() || this.submitting())) return 'busy';
+
+    const session = this.sessionCoordinator.session;
+    const result = session.addJobToDraft(id);
+    if (result !== 'added' && result !== 'added-not-saved') return result;
+
+    if (facadeCurrent && this.sessionSource()) {
+      const saved = session.session();
+      if (this.sessionSource() === 'job' && saved.source?.type === 'job' &&
+          this.sessionSourceId() === saved.source.id) {
+        if (!this.jobs().some((item) => item.id === id)) {
+          this.jobs.update((jobs) => [...jobs, { ...job, id }]);
+        }
+        this.selectedJobIds.set([...(saved.selectedJobIds ?? [])]);
+      } else {
+        this.generation++;
+        this.sessionSource.set(null);
+        this.sessionSourceId.set('');
+        this.jobs.set([]);
+        this.selectedJobIds.set([]);
+      }
+    }
+    return result;
+  }
+
   refreshProfileOptions(): void {
     const generation = this.generation;
     const owner = this.auth.authSession().user?.email ?? null;
+    const authToken = this.auth.authSession().token ?? null;
     this.loading.set(true);
     this.error.set(null);
     forkJoin({ profiles: this.api.listProfiles(), requests: this.api.listTailoringRequests() }).subscribe({
       next: ({ profiles, requests }) => {
-        if (generation !== this.generation || owner !== (this.auth.authSession().user?.email ?? null)) return;
+        if (generation !== this.generation || (owner !== (this.auth.authSession().user?.email ?? null) || authToken !== (this.auth.authSession().token ?? null))) return;
         this.profiles.set(profiles);
         this.requests.set(requests);
         const selected = this.reportSource()
@@ -306,7 +380,7 @@ export class TailoredCvStore {
         this.selectProfile(selected.id);
         if (previousProfileId === selected.id) this.language.set(previousLanguage);
       },
-      error: (error: unknown) => this.failLoad(error, generation),
+      error: (error: unknown) => this.failLoad(error, generation, owner, authToken),
     });
   }
 
@@ -320,16 +394,17 @@ export class TailoredCvStore {
     this.profileLoading.set(true);
     const generation = this.generation;
     const owner = this.auth.authSession().user?.email ?? null;
+    const authToken = this.auth.authSession().token ?? null;
     this.api.getProfileVersion(id).subscribe({
       next: (detail) => {
-        if (generation !== this.generation || this.profileId() !== id || owner !== (this.auth.authSession().user?.email ?? null)) return;
+        if (generation !== this.generation || this.profileId() !== id || (owner !== (this.auth.authSession().user?.email ?? null) || authToken !== (this.auth.authSession().token ?? null))) return;
         this.profileLoading.set(false);
         this.profileReady.set(detail.id === id && hasProfileData(detail.data));
         if (!this.profileReady()) this.error.set('This profile has no usable data. Build or choose a valid profile.');
         else this.error.set(null);
       },
       error: (error: unknown) => {
-        if (generation !== this.generation || this.profileId() !== id || owner !== (this.auth.authSession().user?.email ?? null)) return;
+        if (generation !== this.generation || this.profileId() !== id || (owner !== (this.auth.authSession().user?.email ?? null) || authToken !== (this.auth.authSession().token ?? null))) return;
         console.error('Unable to load tailoring profile', error);
         this.profileLoading.set(false);
         this.error.set('Unable to verify this profile. Please retry or choose another profile.');
@@ -349,14 +424,22 @@ export class TailoredCvStore {
     } else if (!checked) {
       this.selectedJobIds.set(ids.filter((item) => item !== id));
     }
+    const source = this.sessionSource();
+    if (source) {
+      this.sessionCoordinator.session.setDraft(
+        { type: source, id: this.sessionSourceId() },
+        source === 'report'
+          ? this.sessionCoordinator.session.jobIds()
+          : this.jobs().map((job) => job.id),
+        this.selectedJobIds(),
+      );
+    }
   }
 
   submit(): void {
     if (!this.canSubmit()) return;
-    const owner = this.auth.authSession().user?.email ?? null;
-    this.submitting.set(true);
-    this.error.set(null);
-    this.api.createTailoring({
+    this.sessionCoordinator.session.startSubmission(this.selectedJobIds());
+    this.submission.submit({
       job_ids: [...this.selectedJobIds()],
       profile_id: this.profileId(),
       cv_mode: this.mode(),
@@ -364,307 +447,67 @@ export class TailoredCvStore {
         ? { enabled: true, mode: this.coverLetterMode() }
         : { enabled: false },
       output_language: this.language().trim(),
-    }).subscribe({
-      next: (process) => {
-        if (owner !== (this.auth.authSession().user?.email ?? null)) return;
-        this.submitting.set(false);
-        if (!process.id || !process.result_id) {
-          this.error.set('The request may have been accepted, but its identifiers were missing. Check tailoring history before retrying.');
-          this.submissionUncertain.set(true);
-          return;
-        }
-        this.saveProcess(process.result_id, process.id);
-        this.sessionSource.set(null);
-        this.sessionSourceId.set('');
-        this.jobs.set([]);
-        this.selectedJobIds.set([]);
-        this.accepted.set(process);
-      },
-      error: (error: unknown) => {
-        if (owner !== (this.auth.authSession().user?.email ?? null)) return;
-        console.error('Unable to submit tailoring request', error);
-        this.submitting.set(false);
-        this.submissionUncertain.set(true);
-        this.error.set('Unable to confirm submission. Check tailoring history before retrying to avoid duplicates.');
-      },
+    }, (process) => {
+      if (!process.result_id) return;
+      this.sessionCoordinator.session.acceptSubmission(process.result_id);
+      this.sessionSource.set(null);
+      this.sessionSourceId.set('');
+      this.jobs.set([]);
+      this.selectedJobIds.set([]);
     });
   }
 
   loadHistory(): void {
-    const owner = this.auth.authSession().user?.email ?? null;
-    this.historyLoading.set(true);
-    this.historyError.set(null);
-    this.historyDocumentErrors.set([]);
-    this.documentError.set(null);
-    this.requests.set([]);
-    this.api.listTailoringRequests().subscribe({
-      next: (requests) => {
-        if (owner !== (this.auth.authSession().user?.email ?? null)) return;
-        this.requests.set(requests);
-        const terminal = requests.filter((request) =>
-          ['completed', 'partial', 'failed'].includes(request.status),
-        );
-        if (!terminal.length) {
-          this.historyLoading.set(false);
-          return;
-        }
-
-        forkJoin(terminal.map((request) => this.api.getTailoringRequest(request.id).pipe(
-          map((detail) => ({ detail, id: request.id, failed: false })),
-          catchError((error: unknown) => {
-            console.error('Unable to load tailoring history documents', error);
-            return of({ detail: request, id: request.id, failed: true });
-          }),
-        ))).subscribe((results) => {
-          if (owner !== (this.auth.authSession().user?.email ?? null)) return;
-          const byId = new Map(results.map((result) => [result.id, result.detail]));
-          this.requests.set(requests.map((request) => byId.get(request.id) ?? request));
-          this.historyDocumentErrors.set(results.filter((result) => result.failed).map((result) => result.id));
-          this.historyLoading.set(false);
-        });
-      },
-      error: (error: unknown) => {
-        if (owner !== (this.auth.authSession().user?.email ?? null)) return;
-        console.error('Unable to load tailoring history', error);
-        this.historyLoading.set(false);
-        this.historyError.set('Unable to load tailoring history. Please retry.');
-      },
-    });
+    this.content.clearError();
+    this.history.load();
   }
 
   acknowledgeUncertainSubmission(): void {
     if (!this.submissionUncertain() || this.historyLoading() || this.historyError()) return;
     this.submissionUncertain.set(false);
+    if (this.sessionCoordinator.session.status() === 'submitting') {
+      this.sessionCoordinator.session.setStatus('open');
+    }
     this.error.set(null);
     this.detailError.set(null);
   }
 
   trackRequest(requestId: string): void {
-    const owner = this.auth.authSession().user?.email ?? null;
-    this.stopTracking();
-    this.detail.set(null);
-    this.process.set(null);
-    this.detailError.set(null);
-    this.trackingWarning.set(null);
-    this.detailLoading.set(true);
-    const processId = this.readProcess(requestId);
-    if (!processId && !this.trackingWarning()) {
-      this.trackingWarning.set('Detailed processing status is unavailable; showing request status instead.');
-    }
-    this.tracking = timer(0, 2000).pipe(
-      exhaustMap(() => {
-        const status$: Observable<TailoringProcess | null> = processId
-          ? this.api.getTailoringProcess(processId)
-          : of(null);
-        return status$.pipe(
-          catchError((error: unknown) => {
-            console.error('Unable to check tailoring process', error);
-            this.trackingWarning.set('Unable to confirm processing status. Showing the last confirmed state.');
-            return of(null);
-          }),
-          exhaustMap((process) => {
-            if (owner !== (this.auth.authSession().user?.email ?? null)) return of(null);
-            if (process) {
-              if (!['pending', 'running', 'done', 'failed'].includes(process.status)) {
-                this.trackingWarning.set(`Unrecognized processing status: ${process.status}.`);
-              } else {
-                this.process.set(process);
-                this.trackingWarning.set(null);
-              }
-            }
-            return this.api.getTailoringRequest(requestId).pipe(
-              catchError((error: unknown) => {
-                console.error('Unable to load tailoring request', error);
-                this.detailLoading.set(false);
-                this.detailError.set('Unable to confirm request status. Please retry.');
-                return of(null);
-              }),
-            );
-          }),
-        );
-      }),
-    ).subscribe((request) => {
-      if (owner !== (this.auth.authSession().user?.email ?? null)) return;
-      if (!request) return;
-      this.detailLoading.set(false);
-      this.detailError.set(null);
-      this.detail.set(request);
-      if (['completed', 'partial', 'failed'].includes(request.status)) this.stopTracking();
-    });
+    this.tracker.track(requestId);
   }
 
   stopTracking(): void {
-    this.tracking?.unsubscribe();
-    this.tracking = undefined;
+    this.tracker.stop();
   }
 
   retryFailed(selectedJobIds: string[]): void {
-    const request = this.detail();
-    if (!request || request.status !== 'failed' || this.submitting() || this.submissionUncertain()) return;
-    const owner = this.auth.authSession().user?.email ?? null;
-    const jobIds = [...selectedJobIds];
-    const coverLetter = request.cover_letter ?? { enabled: false, mode: null };
-    if (!request.profile_id || !request.output_language.trim() ||
-        typeof coverLetter.enabled !== 'boolean' ||
-        request.job_ids.length < 1 ||
-        request.job_ids.length > 10 || new Set(request.job_ids).size !== request.job_ids.length ||
-        !['per_job', 'general'].includes(request.cv_mode)) {
-      this.detailError.set('The original request is missing valid retry details. Start a new request from a job or report.');
-      return;
-    }
-    let retryCoverLetter: CoverLetterOptions;
-    if (coverLetter.enabled) {
-      if (!isTailoringMode(coverLetter.mode)) {
-        this.detailError.set('The original request is missing valid retry details. Start a new request from a job or report.');
-        return;
+    this.submission.retryFailed(this.detail(), selectedJobIds, (jobIds) => {
+      const session = this.sessionCoordinator.session;
+      if (this.loading() || this.addingJob() || session.status() === 'submitting' || session.status() === 'processing' ||
+          (session.status() === 'open' && session.jobIds().length > 0)) {
+        this.detailError.set('Finish or discard the current tailoring session before retrying.');
+        return false;
       }
-      retryCoverLetter = { enabled: true, mode: coverLetter.mode };
-    } else {
-      retryCoverLetter = { enabled: false };
-    }
-    if (jobIds.length < 1 || jobIds.length > 10 || new Set(jobIds).size !== jobIds.length ||
-        jobIds.some((id) => !request.job_ids.includes(id))) {
-      this.detailError.set('Select one to ten jobs from the failed request before retrying.');
-      return;
-    }
-    this.submitting.set(true);
-    this.detailError.set(null);
-    forkJoin({
-      profile: this.api.getProfileVersion(request.profile_id),
-      jobs: forkJoin(jobIds.map((id) => this.api.getNormalizedJob(id))),
-      requests: this.api.listTailoringRequests(),
-    }).subscribe({
-      next: ({ profile, jobs, requests }) => {
-        if (owner !== (this.auth.authSession().user?.email ?? null)) return;
-        const sameJobs = (other: TailoringRequest) =>
-          other.profile_id === request.profile_id && other.status === 'processing' &&
-          other.job_ids.length === jobIds.length &&
-          [...other.job_ids].sort().every((id, i) => id === [...jobIds].sort()[i]);
-        if (profile.id !== request.profile_id || !hasProfileData(profile.data) ||
-            jobs.some((job, index) => job.id !== jobIds[index] || job.status.toLowerCase() !== 'completed') ||
-            requests.some(sameJobs)) {
-          this.submitting.set(false);
-          this.detailError.set('The profile or jobs are unavailable, or a request is already processing. Check tailoring history.');
-          return;
-        }
-        this.api.createTailoring({
-          job_ids: jobIds,
-          profile_id: request.profile_id,
-          cv_mode: request.cv_mode,
-          cover_letter: retryCoverLetter,
-          output_language: request.output_language,
-        }).subscribe({
-          next: (process) => {
-            if (owner !== (this.auth.authSession().user?.email ?? null)) return;
-            this.submitting.set(false);
-            if (!process.id || !process.result_id) {
-              this.submissionUncertain.set(true);
-              this.detailError.set('The retry may have been accepted. Check tailoring history before retrying.');
-              return;
-            }
-            this.saveProcess(process.result_id, process.id);
-            this.accepted.set(process);
-          },
-          error: (error: unknown) => {
-            if (owner !== (this.auth.authSession().user?.email ?? null)) return;
-            console.error('Unable to retry tailoring', error);
-            this.submitting.set(false);
-            this.submissionUncertain.set(true);
-            this.detailError.set('Unable to confirm the retry. Check tailoring history before retrying.');
-          },
-        });
-      },
-      error: (error: unknown) => {
-        if (owner !== (this.auth.authSession().user?.email ?? null)) return;
-        console.error('Unable to verify retry context', error);
-        this.submitting.set(false);
-        this.detailError.set('Unable to verify the profile or jobs. Please retry.');
-      },
+      session.setJobs(jobIds);
+      session.startSubmission(jobIds);
+      return true;
+    }, (process) => {
+      if (process.result_id) this.sessionCoordinator.session.acceptSubmission(process.result_id);
     });
   }
 
   previewDocument(id: string): void {
-    const generation = ++this.previewGeneration;
-    const owner = this.auth.authSession().user?.email ?? null;
-    this.preview.set(null);
-    this.documentError.set(null);
-    this.documentLoading.set(true);
-    this.api.downloadTailoredDocument(id).subscribe({
-      next: (blob) => {
-        void blob.text().then((text) => {
-          if (generation !== this.previewGeneration || owner !== (this.auth.authSession().user?.email ?? null)) return;
-          this.preview.set(text);
-          this.documentLoading.set(false);
-        }).catch((error: unknown) => {
-          if (generation !== this.previewGeneration || owner !== (this.auth.authSession().user?.email ?? null)) return;
-          console.error('Unable to read document preview', error);
-          this.documentLoading.set(false);
-          this.documentError.set('Unable to read the document preview. Please retry.');
-        });
-      },
-      error: (error: unknown) => {
-        if (generation !== this.previewGeneration || owner !== (this.auth.authSession().user?.email ?? null)) return;
-        console.error('Unable to retrieve document preview', error);
-        this.documentLoading.set(false);
-        this.documentError.set('Unable to retrieve the document. Please retry.');
-      },
-    });
+    this.content.previewDocument(id);
   }
 
   downloadDocument(id: string, filename: string | null): void {
-    const owner = this.auth.authSession().user?.email ?? null;
-    this.documentError.set(null);
-    this.api.downloadTailoredDocument(id).subscribe({
-      next: (blob) => {
-        if (owner !== (this.auth.authSession().user?.email ?? null)) return;
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename || 'tailored-document.md';
-        link.click();
-        setTimeout(() => URL.revokeObjectURL(url), 0);
-      },
-      error: (error: unknown) => {
-        if (owner !== (this.auth.authSession().user?.email ?? null)) return;
-        console.error('Unable to download CV', error);
-        this.documentError.set('Unable to download the document. Please retry.');
-      },
-    });
+    this.content.downloadDocument(id, filename);
   }
 
-  private storageKey(requestId: string): string | null {
-    const user = this.auth.authSession().user?.email;
-    return user ? `tip.tailoring.process.${encodeURIComponent(user)}.${encodeURIComponent(requestId)}` : null;
-  }
-
-  private saveProcess(requestId: string, processId: string): void {
-    const key = this.storageKey(requestId);
-    if (!key) {
-      this.trackingWarning.set('Processing status may be unavailable after a reload; use tailoring history to check the request.');
-      return;
-    }
-    try {
-      localStorage.setItem(key, processId);
-    } catch (error: unknown) {
-      console.error('Unable to save tailoring process identifier', error);
-      this.trackingWarning.set('Processing status may be unavailable after a reload; use tailoring history to check the request.');
-    }
-  }
-
-  private readProcess(requestId: string): string | null {
-    const key = this.storageKey(requestId);
-    if (!key) return null;
-    try {
-      return localStorage.getItem(key);
-    } catch (error: unknown) {
-      console.error('Unable to read tailoring process identifier', error);
-      this.trackingWarning.set('Detailed processing status is unavailable; showing request status instead.');
-      return null;
-    }
-  }
-
-  private failLoad(error: unknown, generation: number): void {
-    if (generation !== this.generation) return;
+  private failLoad(error: unknown, generation: number, owner: string | null, token: string | null): void {
+    if (generation !== this.generation ||
+        owner !== (this.auth.authSession().user?.email ?? null) ||
+        token !== (this.auth.authSession().token ?? null)) return;
     console.error('Unable to load tailoring setup', error);
     this.loading.set(false);
     this.error.set('Unable to load tailoring setup. Please try again.');
@@ -673,20 +516,4 @@ export class TailoredCvStore {
 
 function isNonEmpty(value: string | undefined | null): value is string {
   return typeof value === 'string' && value.length > 0;
-}
-
-function isTailoringMode(value: unknown): value is TailoringMode {
-  return value === 'per_job' || value === 'general';
-}
-
-function hasProfileData(data: Record<string, unknown> | null): boolean {
-  return !!data && Object.entries(data).some(([key, value]) => key !== '__evidence__' && hasValue(value));
-}
-
-function hasValue(value: unknown): boolean {
-  if (typeof value === 'string') return value.trim().length > 0;
-  if (typeof value === 'number' || typeof value === 'boolean') return true;
-  if (Array.isArray(value)) return value.some(hasValue);
-  if (value && typeof value === 'object') return Object.values(value).some(hasValue);
-  return false;
 }

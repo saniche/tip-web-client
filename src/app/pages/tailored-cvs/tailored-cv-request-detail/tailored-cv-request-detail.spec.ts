@@ -26,6 +26,7 @@ const request = {
 
 function createStoreMock() {
   return {
+    sessionCoordinator: { session: { storageError: signal(null) }, warning: signal(null) },
     accepted: signal(null),
     detailLoading: signal(false),
     detailError: signal(null),

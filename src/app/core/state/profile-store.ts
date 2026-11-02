@@ -2,6 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { catchError, concatMap, finalize, from, interval, of, startWith, switchMap, takeUntil, takeWhile, tap, timer, toArray } from 'rxjs';
 import { TipApi } from '../api/tip-api';
 import { ProfileData, ProfileSession, UserProfile } from '../models/profile.models';
+import { ProfileVersion } from '../models/tailored-cv';
 
 const TERMINAL_FILE_STATUSES = new Set(['failed', 'cancel', 'completed']);
 export const PROFILE_POLLING_TIMEOUT_MS = 15 * 60 * 1000;
@@ -20,6 +21,25 @@ export class ProfileStore {
   readonly saveMessage = signal<string | null>(null);
   readonly uploadErrors = signal<{ fileName: string; message: string }[]>([]);
   readonly processingNotice = signal<string | null>(null);
+
+/*  listProfiles(): ProfileVersion[] {
+    this.isLoading.set(true);
+    this.error.set(null);
+    this.api
+      .listProfiles()
+      .pipe(finalize(() => this.isLoading.set(false)))
+      .subscribe({
+        next: (profiles) => {
+          // Handle the list of profiles as needed
+          return profiles;
+        },
+        error: (error) => {
+          this.error.set(getErrorMessage(error, 'Unable to list profiles.'));
+          return [];
+        },
+      });
+  }
+*/
 
   loadProfile(): void {
     this.isLoading.set(true);

@@ -6,6 +6,7 @@ import { NormalizedJobDetail } from '../models/normalized-job';
 import { TailoringProcess } from '../models/tailored-cv';
 import { AuthStore } from './auth-store';
 import { TailoredCvStore } from './tailored-cv-store';
+import { writeUserStorage } from '../utils/user-storage';
 
 const profile = {
   id: 'report-profile',
@@ -63,7 +64,7 @@ describe('TailoredCvStore', () => {
       providers: [
         TailoredCvStore,
         { provide: TipApi, useValue: api },
-        { provide: AuthStore, useValue: { authSession: () => ({ user: { email: 'test@example.test' } }) } },
+        { provide: AuthStore, useValue: { authSession: () => ({ token: 'token', user: { email: 'test@example.test' } }) } },
       ],
     });
     store = TestBed.inject(TailoredCvStore);
@@ -96,6 +97,50 @@ describe('TailoredCvStore', () => {
     });
     response.next({ id: 'process', result_id: 'request', status: 'pending' });
     response.complete();
+  });
+
+  it('restores a report draft with its selected jobs and pinned profile', () => {
+      store.loadSetup('report', 'report-1');
+      store.toggleJob('job-1', true);
+      api.getMatchingReport.mockReturnValue(of({
+        id: 'report-1', status: 'completed', results: [{ jobId: 'new-job' }],
+      }));
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          TailoredCvStore,
+          { provide: TipApi, useValue: api },
+          { provide: AuthStore, useValue: { authSession: () => ({ token: 'token', user: { email: 'test@example.test' } }) } },
+        ],
+      });
+      store = TestBed.inject(TailoredCvStore);
+      store.restoreDraft();
+      expect(store.sessionSourceId()).toBe('report-1');
+      expect(store.profileId()).toBe('report-profile');
+      expect(store.jobs().map((item) => item.id)).toEqual(['job-1']);
+      expect(store.selectedJobIds()).toEqual(['job-1']);
+  });
+
+  it('requires history review when a submission was interrupted by a reload', () => {
+      store.loadSetup('job', 'job-1');
+      api.createTailoring.mockReturnValue(new Subject<TailoringProcess>());
+      store.submit();
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          TailoredCvStore,
+          { provide: TipApi, useValue: api },
+          { provide: AuthStore, useValue: { authSession: () => ({ token: 'token', user: { email: 'test@example.test' } }) } },
+        ],
+      });
+      store = TestBed.inject(TailoredCvStore);
+      TestBed.tick();
+      expect(store.submissionUncertain()).toBe(true);
+      expect(store.error()).toContain('Check tailoring history');
+      expect(store.sessionCoordinator.session.status()).toBe('submitting');
+      store.loadHistory();
+      store.acknowledgeUncertainSubmission();
+      expect(store.sessionCoordinator.session.status()).toBe('open');
   });
 
   it('blocks report tailoring when its profile is unavailable', () => {
@@ -299,6 +344,8 @@ describe('TailoredCvStore', () => {
       cover_letter: { enabled: true, mode: 'per_job' },
       output_language: 'French',
     });
+    expect(store.sessionCoordinator.session.status()).toBe('processing');
+    expect(store.sessionCoordinator.session.session().requestId).toBe('retry-request');
 
     store.detail.set({
       id: 'partial-request',
@@ -313,6 +360,20 @@ describe('TailoredCvStore', () => {
     });
     store.retryFailed(['job-1']);
     expect(api.createTailoring).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not replace an open draft when retrying another request', () => {
+    store.loadSetup('job', 'job-1');
+    store.detail.set({
+      id: 'failed-request', status: 'failed', error: null, job_ids: ['job-1'],
+      profile_id: 'report-profile', cv_mode: 'general',
+      cover_letter: { enabled: false, mode: null }, output_language: 'French', created_at: '',
+    });
+    store.retryFailed(['job-1']);
+    expect(api.createTailoring).not.toHaveBeenCalled();
+    expect(store.detailError()).toContain('Finish or discard');
+    expect(store.sessionSource()).toBe('job');
+    expect(store.selectedJobIds()).toEqual(['job-1']);
   });
 
   it('defaults letters off and submits the independent letter mode once', () => {
@@ -367,7 +428,7 @@ describe('TailoredCvStore', () => {
 
   it('retains the last confirmed processing state on an unknown response', () => {
     vi.useFakeTimers();
-    localStorage.setItem('tip.tailoring.process.test%40example.test.request', 'process');
+    writeUserStorage('test@example.test', 'tailoring.process.request', 'process');
     api.getTailoringProcess
       .mockReturnValueOnce(of({ id: 'process', result_id: 'request', status: 'running' }))
       .mockReturnValueOnce(of({ id: 'process', result_id: 'request', status: 'unexpected' }));

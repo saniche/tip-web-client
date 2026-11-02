@@ -1,7 +1,9 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import { EMPTY, Observable, Subject, Subscription, forkJoin, merge, of, timer } from 'rxjs';
-import { catchError, concatMap, exhaustMap, map } from 'rxjs/operators';
+import { catchError, concatMap, exhaustMap, map, takeUntil } from 'rxjs/operators';
 import { TipApi } from '../api/tip-api';
+import { AuthStore } from './auth-store';
+import { readUserStorage, removeUserStorage, writeUserStorage } from '../utils/user-storage';
 import {
   MatchingProcess,
   MatchingReport,
@@ -12,7 +14,7 @@ import {
   SelectedMatchingJob,
 } from '../models/matching';
 
-export const MATCHING_SESSION_STORAGE_KEY = 'tip.matching.session';
+export const MATCHING_SESSION_STORAGE_KEY = 'matching.session';
 const INTEREST_PAGE_SIZE = 20;
 const PROCESS_POLL_INTERVAL_MS = 2000;
 
@@ -149,6 +151,9 @@ function describeError(error: unknown, fallback: string): string {
 @Injectable({ providedIn: 'root' })
 export class MatchingStore {
   private readonly api = inject(TipApi);
+  private readonly auth = inject(AuthStore);
+  private owner: string | null = null;
+  private token: string | null = null;
   private readonly state = signal<MatchingStoreState>({
     session: null,
     summary: null,
@@ -158,9 +163,10 @@ export class MatchingStore {
   });
   private pollSubscription: Subscription | null = null;
   private readonly manualPollRequests = new Subject<void>();
+  private readonly ownerChanged = new Subject<void>();
 
-  readonly session = computed(() => this.state().session);
-  readonly summary = computed(() => this.state().summary);
+  readonly session = computed(() => this.isOwnerCurrent() ? this.state().session : null);
+  readonly summary = computed(() => this.isOwnerCurrent() ? this.state().summary : null);
   readonly storageError = computed(() => this.state().storageError);
   readonly trackingWarning = computed(() => this.state().trackingWarning);
   readonly membershipCheckError = computed(() => this.state().membershipCheckError);
@@ -173,10 +179,12 @@ export class MatchingStore {
   readonly discardConfirmationRequested = this.discardRequested.asReadonly();
 
   constructor() {
-    this.restoreSession();
+    this.syncOwner();
+    effect(() => this.syncOwner());
   }
 
   addJob(selection: MatchingJobSelection): boolean {
+    this.syncOwner();
     if (!selection.jobId.trim()) {
       return false;
     }
@@ -264,8 +272,10 @@ export class MatchingStore {
       return;
     }
     this.state.update((current) => ({ ...current, membershipCheckError: null }));
-    this.loadAllInterestIds().subscribe({
+    const token = this.token;
+    this.loadAllInterestIds().pipe(takeUntil(this.ownerChanged)).subscribe({
       next: (interestIds) => {
+        if (!this.isRequestCurrent(token)) return;
         const latest = this.session();
         if (!latest || latest.id !== session.id || latest.state !== 'open') {
           return;
@@ -279,6 +289,7 @@ export class MatchingStore {
         });
       },
       error: (error: unknown) => {
+        if (!this.isRequestCurrent(token)) return;
         console.error(error);
         this.state.update((current) => ({
           ...current,
@@ -301,9 +312,13 @@ export class MatchingStore {
     }
 
     const sessionId = session.id;
-    this.api.getProfile().subscribe({
-      next: () => this.prepareInterests(sessionId),
+    const token = this.token;
+    this.api.getProfile().pipe(takeUntil(this.ownerChanged)).subscribe({
+      next: () => {
+        if (this.isRequestCurrent(token) && this.session()?.id === sessionId) this.prepareInterests(sessionId);
+      },
       error: (error: unknown) => {
+        if (!this.isRequestCurrent(token)) return;
         console.error(error);
         this.failPreparation(
           sessionId,
@@ -322,8 +337,10 @@ export class MatchingStore {
       ...current,
       summary: { ...summary, report: null, reportLoadState: 'loading' },
     }));
-    this.api.getMatchingReport(summary.reportId).subscribe({
+    const token = this.token;
+    this.api.getMatchingReport(summary.reportId).pipe(takeUntil(this.ownerChanged)).subscribe({
       next: (report) => {
+        if (!this.isOwnerCurrent() || token !== this.token || this.summary()?.reportId !== summary.reportId) return;
         if (report.id !== summary.reportId) {
           this.updateSummaryReportFailure(
             'The service returned a report with an unexpected identifier.',
@@ -333,6 +350,7 @@ export class MatchingStore {
         this.updateSummaryReport(report);
       },
       error: (error: unknown) => {
+        if (!this.isOwnerCurrent() || token !== this.token || this.summary()?.reportId !== summary.reportId) return;
         console.error(error);
         this.updateSummaryReportFailure(describeError(error, 'The report could not be loaded.'));
       },
@@ -409,9 +427,14 @@ export class MatchingStore {
   }
 
   private prepareInterests(sessionId: string): void {
-    this.loadAllInterestIds().subscribe({
-      next: (interestIds) => this.synchronizeInterests(sessionId, interestIds),
+    if (this.session()?.id !== sessionId) return;
+    const token = this.token;
+    this.loadAllInterestIds().pipe(takeUntil(this.ownerChanged)).subscribe({
+      next: (interestIds) => {
+        if (this.isRequestCurrent(token)) this.synchronizeInterests(sessionId, interestIds);
+      },
       error: (error: unknown) => {
+        if (!this.isRequestCurrent(token)) return;
         console.error(error);
         this.failPreparation(
           sessionId,
@@ -422,6 +445,7 @@ export class MatchingStore {
   }
 
   private synchronizeInterests(sessionId: string, existingInterestIds: Set<string>): void {
+    const token = this.token;
     const session = this.session();
     if (!session || session.id !== sessionId || session.state !== 'submitting') {
       return;
@@ -454,6 +478,7 @@ export class MatchingStore {
               this.api.addInterest(job.jobId).pipe(
                 map((): InterestAddResult => ({ jobId: job.jobId, error: null })),
                 catchError((error: unknown) => {
+                  if (!this.isRequestCurrent(token)) return EMPTY;
                   console.error(error);
                   return of({
                     jobId: job.jobId,
@@ -465,11 +490,18 @@ export class MatchingStore {
           );
 
     results$
-      .pipe(concatMap((results) => this.refreshInterestsAfterAdds(sessionId, results)))
+      .pipe(
+        concatMap((results) =>
+          this.isRequestCurrent(token) ? this.refreshInterestsAfterAdds(sessionId, results) : EMPTY,
+        ),
+        takeUntil(this.ownerChanged),
+      )
       .subscribe({
-        next: ({ eligibleJobIds, notSubmittedJobs }) =>
-          this.submitMatchingJobs(sessionId, eligibleJobIds, notSubmittedJobs),
+        next: ({ eligibleJobIds, notSubmittedJobs }) => {
+          if (this.isRequestCurrent(token)) this.submitMatchingJobs(sessionId, eligibleJobIds, notSubmittedJobs);
+        },
         error: (error: unknown) => {
+          if (!this.isRequestCurrent(token)) return;
           console.error(error);
           this.failPreparation(
             sessionId,
@@ -540,8 +572,10 @@ export class MatchingStore {
       return;
     }
 
-    this.api.submitMatching(eligibleJobIds).subscribe({
+    const token = this.token;
+    this.api.submitMatching(eligibleJobIds).pipe(takeUntil(this.ownerChanged)).subscribe({
       next: (process) => {
+        if (!this.isRequestCurrent(token)) return;
         const current = this.session();
         if (!current || current.id !== sessionId) {
           return;
@@ -561,6 +595,7 @@ export class MatchingStore {
         this.handleProcessResponse(sessionId, process);
       },
       error: (error: unknown) => {
+        if (!this.isRequestCurrent(token)) return;
         console.error(error);
         const current = this.session();
         if (!current || current.id !== sessionId) {
@@ -582,6 +617,7 @@ export class MatchingStore {
   private loadAllInterestIds(
     pageNumber = 1,
     collectedIds = new Set<string>(),
+    token = this.token,
   ): Observable<Set<string>> {
     return this.api.listInterests({ page: pageNumber, limit: INTEREST_PAGE_SIZE }).pipe(
       map((page) => {
@@ -610,7 +646,9 @@ export class MatchingStore {
         return { ids, nextPage: pageNumber < totalPages ? pageNumber + 1 : null };
       }),
       concatMap(({ ids, nextPage }) =>
-        nextPage === null ? of(ids) : this.loadAllInterestIds(nextPage, ids),
+        !this.isRequestCurrent(token)
+          ? EMPTY
+          : nextPage === null ? of(ids) : this.loadAllInterestIds(nextPage, ids, token),
       ),
     );
   }
@@ -667,11 +705,13 @@ export class MatchingStore {
     if (this.pollSubscription && !this.pollSubscription.closed) {
       return;
     }
+    const token = this.token;
     this.pollSubscription = merge(timer(0, PROCESS_POLL_INTERVAL_MS), this.manualPollRequests)
       .pipe(
         exhaustMap(() =>
-          this.api.getMatchingProcess(processingId).pipe(
+          !this.isRequestCurrent(token) ? EMPTY : this.api.getMatchingProcess(processingId).pipe(
             catchError((error: unknown) => {
+              if (!this.isRequestCurrent(token)) return EMPTY;
               console.error(error);
               this.state.update((current) => ({
                 ...current,
@@ -682,7 +722,9 @@ export class MatchingStore {
           ),
         ),
       )
-      .subscribe((process) => this.applyProcessResponse(sessionId, process));
+      .subscribe((process) => {
+        if (this.isRequestCurrent(token)) this.applyProcessResponse(sessionId, process);
+      });
   }
 
   private applyProcessResponse(sessionId: string, process: MatchingProcess): void {
@@ -696,14 +738,16 @@ export class MatchingStore {
   }
 
   private loadTerminalReport(session: MatchingSession): void {
+    const token = this.token;
     if (!session.reportId) {
       this.closeSession({ ...session, reportLoadState: 'unavailable' }, 'done');
       return;
     }
     const loadingSession = { ...session, reportLoadState: 'loading' as const };
     this.updateSession(loadingSession);
-    this.api.getMatchingReport(session.reportId).subscribe({
+    this.api.getMatchingReport(session.reportId).pipe(takeUntil(this.ownerChanged)).subscribe({
       next: (report) => {
+        if (!this.isOwnerCurrent() || this.token !== token || this.session()?.id !== session.id) return;
         if (report.id !== session.reportId) {
           this.closeSession(
             { ...loadingSession, reportLoadState: 'failed' },
@@ -716,6 +760,7 @@ export class MatchingStore {
         this.closeSession({ ...loadingSession, reportLoadState: 'loaded' }, 'done', report);
       },
       error: (error: unknown) => {
+        if (!this.isOwnerCurrent() || this.token !== token || this.session()?.id !== session.id) return;
         console.error(error);
         this.closeSession(
           { ...loadingSession, reportLoadState: 'failed' },
@@ -733,6 +778,7 @@ export class MatchingStore {
     report: MatchingReport | null = null,
     error: string | null = null,
   ): void {
+    if (this.session()?.id !== session.id) return;
     const notSubmittedJobIds = new Set(session.notSubmittedJobs.map((job) => job.jobId));
     this.state.update((current) => ({
       ...current,
@@ -778,25 +824,20 @@ export class MatchingStore {
   }
 
   private updateSession(session: MatchingSession): void {
+    if (!this.isOwnerCurrent()) {
+      throw new Error('An authenticated user is required to update the matching session.');
+    }
     this.state.update((current) => ({ ...current, session }));
     this.persistSession(session);
   }
 
   private restoreSession(): void {
-    if (typeof window === 'undefined') {
+    if (!this.owner || typeof window === 'undefined') {
       return;
     }
     try {
-      const raw = window.sessionStorage.getItem(MATCHING_SESSION_STORAGE_KEY);
-      if (!raw) {
-        return;
-      }
-      const parsed: unknown = JSON.parse(raw);
-      if (!isMatchingSession(parsed)) {
-        this.state.update((current) => ({
-          ...current,
-          storageError: 'The saved matching session is invalid and cannot be resumed.',
-        }));
+      const parsed = readUserStorage(this.owner, MATCHING_SESSION_STORAGE_KEY, isMatchingSession);
+      if (!parsed) {
         return;
       }
       const lastConfirmedStatus = parsed.lastConfirmedStatus;
@@ -829,33 +870,33 @@ export class MatchingStore {
       console.error(error);
       this.state.update((current) => ({
         ...current,
-        storageError: 'The saved matching session could not be read.',
+        storageError: 'The saved matching session is invalid or could not be read.',
       }));
     }
   }
 
   private persistSession(session: MatchingSession): void {
-    if (typeof window === 'undefined') {
+    if (!this.owner || typeof window === 'undefined') {
       return;
     }
     try {
-      window.sessionStorage.setItem(MATCHING_SESSION_STORAGE_KEY, JSON.stringify(session));
+      writeUserStorage(this.owner, MATCHING_SESSION_STORAGE_KEY, session);
       this.state.update((current) => ({ ...current, storageError: null }));
     } catch (error: unknown) {
       console.error(error);
       this.state.update((current) => ({
         ...current,
-        storageError: 'The matching session could not be saved in this browser tab.',
+        storageError: 'The matching session could not be saved in browser storage.',
       }));
     }
   }
 
   private removePersistedSession(): void {
-    if (typeof window === 'undefined') {
+    if (!this.owner || !this.isOwnerCurrent() || typeof window === 'undefined') {
       return;
     }
     try {
-      window.sessionStorage.removeItem(MATCHING_SESSION_STORAGE_KEY);
+      removeUserStorage(this.owner, MATCHING_SESSION_STORAGE_KEY);
       this.state.update((current) => ({ ...current, storageError: null }));
     } catch (error: unknown) {
       console.error(error);
@@ -864,6 +905,33 @@ export class MatchingStore {
         storageError: 'The saved matching session could not be cleared.',
       }));
     }
+  }
+
+  private isOwnerCurrent(): boolean {
+    const current = this.auth.authSession();
+    return !!this.owner && !!this.token &&
+      this.owner === (current.user?.email ?? null) && this.token === current.token;
+  }
+
+  private isRequestCurrent(token: string | null): boolean {
+    return this.isOwnerCurrent() && token === this.token;
+  }
+
+  private syncOwner(): void {
+    const current = this.auth.authSession();
+    const token = current.token ?? null;
+    const owner = token ? current.user?.email ?? null : null;
+    if (owner === this.owner && token === this.token) return;
+    this.ownerChanged.next();
+    this.stopPolling();
+    this.discardRequested.set(false);
+    this.owner = owner;
+    this.token = token;
+    this.state.set({
+      session: null, summary: null, storageError: null,
+      trackingWarning: null, membershipCheckError: null,
+    });
+    if (owner) this.restoreSession();
   }
 }
 

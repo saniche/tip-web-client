@@ -20,7 +20,12 @@ export class AuthStore {
     
     this.tipApi.login({username: email, password: _password}).subscribe({
       next: (response) => {
-        this.localAuthStore.login(response.access_token, { email, name: null }, 3600 * 23); // Example expiry of 23hour
+        try {
+          this.localAuthStore.login(response.access_token, { email, name: null }, 3600 * 23); // Example expiry of 23hour
+        } catch (error: unknown) {
+          observer.error(error);
+          return;
+        }
         observer.next();
         observer.complete();
 
@@ -35,7 +40,12 @@ export class AuthStore {
       return new Observable<void>((observer) => {
         this.tipApi.register(registerpaylod).subscribe({
           next: (response) => {
-            this.localAuthStore.login(response.access_token, { email: registerpaylod.email, name: null }, 3600 * 23); // Example expiry of 23hour
+            try {
+              this.localAuthStore.login(response.access_token, { email: registerpaylod.email, name: null }, 3600 * 23); // Example expiry of 23hour
+            } catch (error: unknown) {
+              observer.error(error);
+              return;
+            }
             observer.next();
             observer.complete();
           },

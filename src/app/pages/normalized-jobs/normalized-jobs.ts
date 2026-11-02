@@ -10,6 +10,7 @@ import {
   NormalizedJobFilters,
   NormalizedJobsPage,
 } from '../../core/models/normalized-job';
+import {toast, NgxSonnerToaster } from 'ngx-sonner';
 
 type ListingState = 'loading' | 'results' | 'empty' | 'error';
 
@@ -220,7 +221,11 @@ export class NormalizedJobs {
       interestState: 'unknown',
     });
     if (added) {
-      void this.router.navigate(['/matching-session']);
+      toast.success('Job added to the matching session');
+      //void this.router.navigate(['/matching-session']);
+    }
+    else{
+      toast.error('Failed to add job to the matching session');
     }
   }
 

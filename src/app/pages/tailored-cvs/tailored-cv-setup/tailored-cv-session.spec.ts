@@ -35,7 +35,7 @@ describe('Tailoring session workspace', () => {
           { path: 'tailored-cvs', component: OtherPage },
           { path: 'tailored-cvs/:id', component: OtherPage },
         ]),
-        { provide: AuthStore, useValue: { authSession: () => ({ user: { email: 'test@example.test' } }) } },
+        { provide: AuthStore, useValue: { authSession: () => ({ token: 'token', user: { email: 'test@example.test' } }) } },
         { provide: TipApi, useValue: {
           listProfiles: () => of([{
             created_at: '2026-10-23T12:00:00Z', id: 'profile-123', is_default: true,
@@ -50,6 +50,7 @@ describe('Tailoring session workspace', () => {
             { id: 'report-2', profileId: 'profile-123' },
           ]),
           createTailoring,
+          getTailoringRequest: (id: string) => of({ id, status: 'processing' }),
         } },
       ],
     }).compileComponents();
@@ -167,7 +168,7 @@ describe('Tailoring session workspace', () => {
     expect(store.selectedJobIds()).toEqual(['report-job']);
   });
 
-  it('allows returning to a new empty session after an accepted request', async () => {
+  it('shows the running request when returning after it is accepted', async () => {
     await harness.navigateByUrl('/tailoring-session?jobId=job-1', TailoredCvSetup);
     harness.detectChanges();
     button('review-tailoring').click();
@@ -180,6 +181,42 @@ describe('Tailoring session workspace', () => {
     await harness.navigateByUrl('/tailoring-session', TailoredCvSetup);
     harness.detectChanges();
     expect(store.sessionSource()).toBeNull();
-    expect(harness.routeNativeElement?.textContent).toContain('Your tailoring session is empty');
+    expect(harness.routeNativeElement?.textContent).toContain('A tailoring request is running');
+  });
+
+  it('queues a report while running and opens it after the matching request completes', async () => {
+    await harness.navigateByUrl('/tailoring-session?jobId=job-1', TailoredCvSetup);
+    harness.detectChanges();
+    button('review-tailoring').click();
+    harness.detectChanges();
+    button('confirm-tailoring').click();
+    response.next({ id: 'process-1', result_id: 'request-1', status: 'pending' });
+    response.complete();
+    await harness.fixture.whenStable();
+    await harness.navigateByUrl('/tailoring-session?reportId=report-2', TailoredCvSetup);
+    harness.detectChanges();
+    const session = store.sessionCoordinator.session;
+    expect(session.status()).toBe('processing');
+    expect(session.waitingSessions()).toEqual([{
+      status: 'open', jobIds: ['report-job'], source: { type: 'report', id: 'report-2' },
+    }]);
+    expect(createTailoring).toHaveBeenCalledTimes(1);
+    expect(session.finishRequest({
+      id: 'unrelated', status: 'completed', error: null, job_ids: ['job-1'],
+      profile_id: 'profile-123', cv_mode: 'per_job',
+      cover_letter: { enabled: false, mode: null }, output_language: 'English', created_at: '',
+    })).toBe(false);
+    expect(session.finishRequest({
+      id: 'request-1', status: 'completed', error: null, job_ids: ['job-1'],
+      profile_id: 'profile-123', cv_mode: 'per_job',
+      cover_letter: { enabled: false, mode: null }, output_language: 'English', created_at: '',
+    })).toBe(true);
+    harness.detectChanges();
+    expect(store.sessionSource()).toBe('report');
+    expect(store.sessionSourceId()).toBe('report-2');
+    expect(store.profileId()).toBe('profile-123');
+    expect(store.selectedJobIds()).toEqual([]);
+    expect(session.reports().map((report) => report.id)).toEqual(['request-1']);
+    expect(createTailoring).toHaveBeenCalledTimes(1);
   });
 });

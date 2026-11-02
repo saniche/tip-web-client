@@ -5,7 +5,8 @@ import { of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TipApi } from '../../core/api/tip-api';
 import { UserProfile } from '../../core/models/profile.models';
-import { MatchingStore, MATCHING_SESSION_STORAGE_KEY } from '../../core/state/matching-store';
+import { MatchingStore } from '../../core/state/matching-store';
+import { AuthStore } from '../../core/state/auth-store';
 import { MatchingSessionPage } from './matching-session';
 
 const profile: UserProfile = {
@@ -28,7 +29,12 @@ describe('MatchingSessionPage', () => {
   let store: MatchingStore;
 
   beforeEach(async () => {
-    sessionStorage.removeItem(MATCHING_SESSION_STORAGE_KEY);
+    const records = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => records.get(key) ?? null,
+      setItem: (key: string, value: string) => records.set(key, value),
+      removeItem: (key: string) => records.delete(key),
+    });
     api = {
       getProfile: vi.fn(() => of(profile)),
       listInterests: vi.fn(() =>
@@ -63,14 +69,17 @@ describe('MatchingSessionPage', () => {
     };
     await TestBed.configureTestingModule({
       imports: [MatchingSessionPage],
-      providers: [provideRouter([]), { provide: TipApi, useValue: api }],
+      providers: [
+        provideRouter([]), { provide: TipApi, useValue: api },
+        { provide: AuthStore, useValue: { authSession: () => ({ token: 'token', user: { email: 'test@example.test' } }) } },
+      ],
     }).compileComponents();
     store = TestBed.inject(MatchingStore);
   });
 
   afterEach(() => {
     TestBed.resetTestingModule();
-    sessionStorage.removeItem(MATCHING_SESSION_STORAGE_KEY);
+    vi.unstubAllGlobals();
   });
 
   function render(): HTMLElement {

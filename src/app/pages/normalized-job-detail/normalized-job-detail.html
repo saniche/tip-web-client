@@ -35,11 +35,17 @@
         </div>
       </div>
       <div class="normalized-job-detail__actions">
+        
+        <div class="btn-group-vertical" role="group" aria-label="Button group with nested dropdown">
+
         @if (job.status.toLowerCase() === 'completed') {
-          <a class="btn btn-primary" routerLink="/tailoring-session" [queryParams]="{ jobId: job.id }">Add to tailoring session</a>
+          <button type="button" class="btn btn-outline-secondary">Evaluate Matching (Not yet)</button>
+          <button class="btn btn-outline-primary" type="button" (click)="addToTailoring(job)"
+            [disabled]="state() === 'deleting' || state() === 'saving'">Add to tailoring</button>
+          <a class="btn btn-outline-secondary" routerLink="/tailoring-session">View tailoring session</a>
         }
         @if (!isApplied()) {
-          <button class="btn btn-outline-warning" type="button" disabled>
+          <button class="btn btn-outline-success" type="button" disabled>
             Apply (Feature not yet available)
           </button>
 
@@ -58,7 +64,7 @@
             </button>
           } @else if (isInterested()) {
             <button
-              class="btn btn-outline-danger"
+              class="btn btn-outline-warning"
               type="button"
               (click)="toggleInterest()"
               [disabled]="state() === 'deleting' || state() === 'saving'"
@@ -87,6 +93,8 @@
             </button>
           }
         }
+        </div>
+
       </div>
     </header>
 

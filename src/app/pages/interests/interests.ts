@@ -11,6 +11,8 @@ import {
   JobInterestsPage,
 } from '../../core/models/interest';
 
+import { toast } from 'ngx-sonner';
+
 type ListingState = 'loading' | 'results' | 'empty' | 'error';
 
 interface ListingQuery {
@@ -232,7 +234,13 @@ export class Interests {
       interestState: 'known-in-interest',
     });
     if (added) {
-      void this.router.navigate(['/matching-session']);
+      // show a toast or notification indicating the job was added to the matching session
+      toast.success('Job added to the matching session');
+      // no more direct navigation to the matching session page without user action
+      //void this.router.navigate(['/matching-session']);
+    }
+    else{
+      toast.error('Failed to add job to the matching session');
     }
   }
 

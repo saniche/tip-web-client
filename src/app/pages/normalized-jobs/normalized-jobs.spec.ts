@@ -4,7 +4,8 @@ import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TipApi } from '../../core/api/tip-api';
 import { NormalizedJob, NormalizedJobsPage } from '../../core/models/normalized-job';
-import { MatchingStore, MATCHING_SESSION_STORAGE_KEY } from '../../core/state/matching-store';
+import { MatchingStore } from '../../core/state/matching-store';
+import { AuthStore } from '../../core/state/auth-store';
 import { NormalizedJobs } from './normalized-jobs';
 
 const jobs: NormalizedJob[] = [
@@ -41,7 +42,12 @@ describe('NormalizedJobs', () => {
   let queryParams: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
 
   beforeEach(async () => {
-    sessionStorage.removeItem(MATCHING_SESSION_STORAGE_KEY);
+    const records = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => records.get(key) ?? null,
+      setItem: (key: string, value: string) => records.set(key, value),
+      removeItem: (key: string) => records.delete(key),
+    });
     api = { listNormalizedJobs: vi.fn(() => of(jobsPage)) };
     router = { navigate: vi.fn().mockResolvedValue(true) };
     queryParams = new BehaviorSubject(convertToParamMap({}));
@@ -50,6 +56,7 @@ describe('NormalizedJobs', () => {
       imports: [NormalizedJobs],
       providers: [
         { provide: TipApi, useValue: api },
+        { provide: AuthStore, useValue: { authSession: () => ({ token: 'token', user: { email: 'test@example.test' } }) } },
         {
           provide: ActivatedRoute,
           useValue: {
@@ -67,6 +74,7 @@ describe('NormalizedJobs', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   function render(): ComponentFixture<NormalizedJobs> {

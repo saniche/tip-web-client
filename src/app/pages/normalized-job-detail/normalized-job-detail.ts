@@ -4,7 +4,9 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { EMPTY, Subject, combineLatest, catchError, startWith, switchMap, tap } from 'rxjs';
+import { toast } from 'ngx-sonner';
 import { TipApi } from '../../core/api/tip-api';
+import { TailoredCvStore } from '../../core/state/tailored-cv-store';
 import {
   NormalizedJobDetail as JobDetail,
   NormalizedJobHeaderUpdate,
@@ -27,6 +29,7 @@ type DetailState =
 })
 export class NormalizedJobDetail {
   private readonly api = inject(TipApi);
+  private readonly tailoring = inject(TailoredCvStore);
   private readonly destroyRef = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -107,6 +110,47 @@ export class NormalizedJobDetail {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe();
+  }
+
+  protected addToTailoring(job: JobDetail): void {
+    try {
+      const result = this.tailoring.addJobFromDetail(job);
+      switch (result) {
+        case 'added':
+          toast.success('Job added to your tailoring session.');
+          break;
+        case 'added-not-saved':
+          toast.warning('Job added for now, but the tailoring session could not be saved.');
+          break;
+        case 'duplicate':
+          toast.info('This job is already in your tailoring session.');
+          break;
+        case 'running':
+          toast.error('Jobs cannot be added while tailoring is running.');
+          break;
+        case 'report-draft':
+          toast.error('A matching-report session is open. Finish or discard it before adding another job.');
+          break;
+        case 'limit':
+          toast.error('Select at most 10 jobs in a tailoring session.');
+          break;
+        case 'invalid':
+          toast.error('Only an identified, completed job can be added.');
+          break;
+        case 'unauthenticated':
+          toast.error('Sign in before adding a job to tailoring.');
+          break;
+        case 'busy':
+          toast.error('The tailoring session is being updated. Please try again.');
+          break;
+        case 'storage-unavailable':
+          toast.error('The saved tailoring session could not be accessed. No job was added.');
+          break;
+      }
+    } catch (error: unknown) {
+      console.error('Unable to add the job to tailoring', error);
+      toast.error('Unable to add the job to tailoring. Please try again.');
+    }
   }
 
   protected displayValue(value: unknown): string {

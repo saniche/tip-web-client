@@ -1,6 +1,12 @@
 <section class="tailoring-detail">
   <a routerLink="/tailored-cvs">Back to tailoring history</a>
   <h1>Tailoring request</h1>
+  @if (store.sessionCoordinator.session.storageError(); as error) {
+    <p class="alert alert-danger" role="alert">{{ error }}</p>
+  }
+  @if (store.sessionCoordinator.warning(); as warning) {
+    <p class="alert alert-warning" role="status">{{ warning }}</p>
+  }
   @if (store.detailLoading()) { <p role="status">Loading request…</p> }
   @if (store.detailError(); as error) {
     <div class="alert alert-danger" role="alert">

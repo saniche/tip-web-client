@@ -2,6 +2,10 @@ import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { TipApi } from '../api/tip-api';
 import { NormalizationStore } from './normalization-store';
+import { AuthStore } from './auth-store';
+
+const userKey = 'tip.user.v1.test%40example%2Etest.normalization.submissions';
+const auth = { authSession: () => ({ token: 'token', user: { email: 'test@example.test' } }) };
 
 describe('NormalizationStore', () => {
   let store: InstanceType<typeof NormalizationStore>;
@@ -17,7 +21,7 @@ describe('NormalizationStore', () => {
       getProcessingJob: vi.fn(),
     };
     TestBed.configureTestingModule({
-      providers: [{ provide: TipApi, useValue: api }],
+      providers: [{ provide: TipApi, useValue: api }, { provide: AuthStore, useValue: auth }],
     });
     store = TestBed.inject(NormalizationStore);
   });
@@ -315,7 +319,7 @@ describe('NormalizationStore', () => {
 
       store.submit('https://example.com/job', 'content');
 
-      const persisted = JSON.parse(storageData.get('tip.normalization.submissions')!);
+      const persisted = JSON.parse(storageData.get(userKey)!).data;
       expect(persisted).toHaveLength(1);
       expect(persisted[0]).toMatchObject({
         jobId: 'job-1',
@@ -327,7 +331,7 @@ describe('NormalizationStore', () => {
       vi.advanceTimersByTime(0);
 
       expect(store.submissions()[0].status).toBe('completed');
-      const afterCompletion = JSON.parse(storageData.get('tip.normalization.submissions')!);
+      const afterCompletion = JSON.parse(storageData.get(userKey)!).data;
       expect(afterCompletion).toHaveLength(1);
       expect(afterCompletion[0]).toMatchObject({ status: 'completed', resultId: 'job-1' });
     });
@@ -337,7 +341,7 @@ describe('NormalizationStore', () => {
 
       store.submit('https://example.com/job', 'content');
 
-      const persisted = JSON.parse(storageData.get('tip.normalization.submissions')!);
+      const persisted = JSON.parse(storageData.get(userKey)!).data;
       expect(persisted).toHaveLength(1);
       expect(persisted[0]).toMatchObject({ status: 'failed', error: 'Server unavailable' });
     });
@@ -358,11 +362,11 @@ describe('NormalizationStore', () => {
       );
 
       const id = store.submit('https://example.com/job', 'content');
-      expect(storageData.has('tip.normalization.submissions')).toBe(true);
+      expect(storageData.has(userKey)).toBe(true);
 
       store.dismiss(id!);
 
-      expect(storageData.has('tip.normalization.submissions')).toBe(false);
+      expect(storageData.has(userKey)).toBe(false);
     });
   });
 
@@ -399,8 +403,8 @@ describe('NormalizationStore restore after reload', () => {
 
     const storageData = new Map<string, string>([
       [
-        'tip.normalization.submissions',
-        JSON.stringify([
+        userKey,
+        JSON.stringify({ version: 1, expiresAt: Date.now() + 604_800_000, data: [
           {
             id: 'sub-restored',
             jobId: 'job-1',
@@ -421,7 +425,7 @@ describe('NormalizationStore restore after reload', () => {
             error: null,
             submittedAt: '2026-10-17T09:00:00Z',
           },
-        ]),
+        ] }),
       ],
     ]);
     Object.defineProperty(globalThis, 'localStorage', {
@@ -441,7 +445,7 @@ describe('NormalizationStore restore after reload', () => {
       ),
     };
     TestBed.configureTestingModule({
-      providers: [{ provide: TipApi, useValue: api }],
+      providers: [{ provide: TipApi, useValue: api }, { provide: AuthStore, useValue: auth }],
     });
   });
 

@@ -1,5 +1,8 @@
 <section class="tailoring-history">
   <h1>Tailoring history</h1>
+  @if (store.sessionCoordinator.session.storageError(); as error) {
+    <p class="alert alert-danger" role="alert">{{ error }}</p>
+  }
   <p><a routerLink="/tailoring-session">Open tailoring session</a></p>
   @if (store.documentError(); as error) { <p class="alert alert-danger" role="alert">{{ error }}</p> }
   @if (store.historyLoading()) {

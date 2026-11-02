@@ -14,6 +14,19 @@ The client integrates with the Talent Intelligence Platform API and provides the
 - HTTP authentication interceptor for API requests.
 - Route guards on protected workflows.
 
+### Browser storage
+
+- Authentication is kept in session storage. The client ends its session after its configured
+  23-hour lifetime or an authenticated API response of 401; the server remains authoritative
+  about token validity.
+- Saved normalization, matching, and tailoring sessions and tailoring process identifiers use
+  local storage scoped by the signed-in email address. A successful
+  read or write renews its seven-day expiry. Expired entries are removed when accessed, not
+  while the application is closed.
+- Signing out or ending an authentication session clears in-memory state but does not erase
+  saved user data. Browser storage is not encrypted or an access-control boundary. Older
+  unscoped workflow data is not automatically assigned to an account.
+
 ### Candidate profile
 
 - Load and update the candidate's unified profile.
@@ -102,6 +115,15 @@ The client integrates with the Talent Intelligence Platform API and provides the
 The primary navigation groups existing pages under Dashboard, My Profile, Jobs, Job Matching, and Applications. Jobs contains the lightweight Workflow pipeline as well as normalized jobs and interests. Settings is hidden because no settings destination exists.
 
 Tailoring provides navigation to the existing session and history pages, including request details, document previews, and downloads. These pages require authentication; their service-backed workflows still need verification with authenticated fixtures.
+
+Completed normalized jobs can be added to a job-based tailoring draft directly from the job
+detail page, without navigating away. Open the tailoring session when ready to review the
+selected jobs and profile; adding a job does not submit a request.
+
+While a tailoring request is submitting or processing, matching reports can be queued as
+separate sessions. The client tracks the accepted request and opens the next queued report
+when that request finishes; it does not submit the next session automatically. Report jobs
+still require explicit selection, with one to ten jobs per submission.
 
 ## Current client scope and known gaps
 

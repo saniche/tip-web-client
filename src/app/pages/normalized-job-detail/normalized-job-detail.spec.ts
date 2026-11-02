@@ -4,6 +4,7 @@ import { BehaviorSubject, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TipApi } from '../../core/api/tip-api';
 import { NormalizedJobDetail as JobDetail } from '../../core/models/normalized-job';
+import { TailoredCvStore } from '../../core/state/tailored-cv-store';
 import { NormalizedJobDetail } from './normalized-job-detail';
 
 const detail: JobDetail = {
@@ -26,6 +27,7 @@ const detail: JobDetail = {
   createdAt: '2026-10-13T12:00:00Z',
   hasWriteAccess: true,
   isInterested: false,
+  isApplied: false,
 };
 
 describe('NormalizedJobDetail', () => {
@@ -55,6 +57,7 @@ describe('NormalizedJobDetail', () => {
       imports: [NormalizedJobDetail],
       providers: [
         { provide: TipApi, useValue: api },
+        { provide: TailoredCvStore, useValue: { addJobFromDetail: vi.fn(() => 'added') } },
         { provide: Router, useValue: router },
         { provide: ActivatedRoute, useValue: { paramMap: params.asObservable() } },
       ],

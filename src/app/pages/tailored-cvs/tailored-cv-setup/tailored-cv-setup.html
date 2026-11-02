@@ -10,6 +10,18 @@
   @if (launchError(); as error) {
     <p class="alert alert-danger" role="alert">{{ error }}</p>
   }
+  @if (store.sessionCoordinator.warning(); as warning) {
+    <p class="alert alert-info" role="status">{{ warning }}</p>
+  }
+  @if (store.sessionCoordinator.session.storageError(); as error) {
+    <p class="alert alert-danger" role="alert">{{ error }}</p>
+  }
+  @if (store.sessionCoordinator.session.session().requestId; as requestId) {
+    <p role="status">A tailoring request is running. <a [routerLink]="['/tailored-cvs', requestId]">View progress</a></p>
+  }
+  @if (store.sessionCoordinator.session.waitingSessions().length) {
+    <p role="status">{{ store.sessionCoordinator.session.waitingSessions().length }} session(s) waiting.</p>
+  }
   @if (pendingReplacement(); as replacement) {
     <div class="alert alert-warning" role="alert">
       <p>Your current session cannot be combined with this {{ replacement.source === 'report' ? 'matching report' : 'job' }}. Replace the current session?</p>
@@ -37,7 +49,7 @@
   @if (store.warning(); as warning) {
     <p class="alert alert-warning" role="status">{{ warning }}</p>
   }
-  @if (!store.loading() && !store.sessionSource()) {
+  @if (!store.loading() && !store.sessionSource() && !store.sessionCoordinator.session.session().requestId) {
     <div class="alert alert-info" role="status">
       <p>Your tailoring session is empty. Add jobs from normalized job pages or start from a matching report.</p>
       <a routerLink="/normalized-jobs">Browse normalized jobs</a>
