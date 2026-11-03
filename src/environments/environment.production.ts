@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  baseUrl: 'https://api.tip.example.com/api',
+  baseUrl: 'https://tip-api.domain.dev/api/v1',
 };
