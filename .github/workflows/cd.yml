@@ -13,6 +13,7 @@ jobs:
 
   deploy:
     needs: ci
+    environment: production
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -30,7 +31,7 @@ jobs:
           push: true
           tags: |
             ghcr.io/saniche/tip-web-client:latest
-            ghcr.io/saniche/tip-web-client:${{ github.sha }}
+            ghcr.io/saniche/tip-web-client:${{ github.sha }}   
       - uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.SSH_HOST }}
