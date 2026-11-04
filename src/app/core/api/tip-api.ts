@@ -196,8 +196,8 @@ export class TipApi {
     });
   }
 
-  updateProfile(data: UserProfile['data'], output_language: string): Observable<UserProfile> {
-    return this.http.put<UserProfile>(`${this.baseUrl}/profile`, { data, output_language });
+  updateProfile(data: UserProfile['data'], label: string, output_language: string): Observable<UserProfile> {
+    return this.http.put<UserProfile>(`${this.baseUrl}/profile`, { data, label, output_language });
   }
 
   createProfileSession(): Observable<ProfileSession> {

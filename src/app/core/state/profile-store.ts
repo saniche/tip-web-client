@@ -53,12 +53,12 @@ export class ProfileStore {
       });
   }
 
-  saveProfile(data: ProfileData, outputLanguage: string): void {
+  saveProfile(data: ProfileData, label:string, outputLanguage: string): void {
     this.isSaving.set(true);
     this.error.set(null);
     this.saveMessage.set(null);
     this.api
-      .updateProfile(data, outputLanguage)
+      .updateProfile(data, label, outputLanguage)
       .pipe(finalize(() => this.isSaving.set(false)))
       .subscribe({
         next: (profile) => {

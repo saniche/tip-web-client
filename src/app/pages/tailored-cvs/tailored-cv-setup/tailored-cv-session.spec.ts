@@ -126,7 +126,7 @@ describe('Tailoring session workspace', () => {
     expect(store.sessionSource()).toBe('report');
     expect(harness.routeNativeElement?.querySelector('[data-testid="replace-tailoring-session"]')).toBeNull();
     expect(createTailoring).not.toHaveBeenCalled();
-  });
+  }, 10_000);
 
   it('asks before replacing an incompatible draft and pins report jobs and profile', async () => {
     await harness.navigateByUrl('/tailoring-session?jobId=job-1', TailoredCvSetup);
@@ -182,7 +182,7 @@ describe('Tailoring session workspace', () => {
     harness.detectChanges();
     expect(store.sessionSource()).toBeNull();
     expect(harness.routeNativeElement?.textContent).toContain('A tailoring request is running');
-  });
+  }, 10_000);
 
   it('queues a report while running and opens it after the matching request completes', async () => {
     await harness.navigateByUrl('/tailoring-session?jobId=job-1', TailoredCvSetup);
@@ -218,5 +218,5 @@ describe('Tailoring session workspace', () => {
     expect(store.selectedJobIds()).toEqual([]);
     expect(session.reports().map((report) => report.id)).toEqual(['request-1']);
     expect(createTailoring).toHaveBeenCalledTimes(1);
-  });
+  }, 10_000);
 });

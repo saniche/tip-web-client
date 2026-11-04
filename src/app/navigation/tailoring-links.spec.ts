@@ -37,7 +37,8 @@ describe('contextual tailoring links', () => {
       provideRouter([]), { provide: ActivatedRoute, useValue: route('report-1') },
       { provide: TipApi, useValue: {
         getMatchingReport: () => of({ id: 'report-1', status: 'archived', profileId: 'profile-1', results: [] }),
-        getProfile: () => of({ id: 'profile-1', data: {}, output_language: 'English' }),
+        getProfile: () =>
+          of({ id: 'profile-1', data: {}, label: 'Profile', output_language: 'English' }),
       } },
     ] });
     const fixture = TestBed.createComponent(MatchingReportDetailPage);

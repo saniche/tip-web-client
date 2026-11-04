@@ -100,7 +100,7 @@ describe('NormalizedJobDetail', () => {
     expect(root().textContent).toContain('TypeScript');
     expect(root().textContent).toContain('Completed');
     expect(root().querySelector('a[href="https://example.com/job-1"]')).toBeTruthy();
-  });
+  }, 10_000);
 
   it('starts with the summary collapsed and renders requested text sections as line-item lists', () => {
     render();

@@ -33,7 +33,13 @@ describe('MatchingReportDetailPage', () => {
       getMatchingReport: vi.fn(() => of(makeReport())),
       getNormalizedJob: vi.fn(() => of(makeJobDetail())),
       getProfile: vi.fn(() =>
-        of({ id: 'profile-current', user_id: 'user-1', data: {}, output_language: 'English' }),
+        of({
+          id: 'profile-current',
+          user_id: 'user-1',
+          data: {},
+          label: 'Current profile',
+          output_language: 'English',
+        }),
       ),
       deleteMatchingReport: vi.fn(() => of(undefined)),
     };

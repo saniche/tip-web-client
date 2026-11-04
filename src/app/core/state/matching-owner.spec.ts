@@ -45,7 +45,13 @@ describe('MatchingStore account isolation', () => {
     });
     store.confirmMatching();
     session.set({ token: null, user: null });
-    profile.next({ id: 'profile-a', user_id: 'a', data: {}, output_language: 'English' });
+    profile.next({
+      id: 'profile-a',
+      user_id: 'a',
+      data: {},
+      output_language: 'English',
+      label: 'Profile A',
+    });
     expect(listInterests).not.toHaveBeenCalled();
     TestBed.tick();
     expect(store.session()).toBeNull();
@@ -72,7 +78,13 @@ describe('MatchingStore account isolation', () => {
     TestBed.tick();
     const restoredId = store.session()?.id;
     store.confirmMatching();
-    profile.next({ id: 'profile-a', user_id: 'a', data: {}, output_language: 'English' });
+    profile.next({
+      id: 'profile-a',
+      user_id: 'a',
+      data: {},
+      output_language: 'English',
+      label: 'Profile A',
+    });
     expect(store.session()?.id).toBe(restoredId);
     expect(listInterests).toHaveBeenCalledTimes(1);
   });

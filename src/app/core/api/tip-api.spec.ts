@@ -395,14 +395,24 @@ describe('TipApi', () => {
     request.flush(null);
   });
 
-  it('updates a profile with data and output language', () => {
+  it('updates a profile with data, label, and output language', () => {
     const data = { name: 'Ada', skills: { languages: ['TypeScript'] } };
-    service.updateProfile(data, 'English').subscribe();
+    service.updateProfile(data, 'Default Label', 'English').subscribe();
 
     const request = http.expectOne(`${environment.baseUrl}/profile`);
     expect(request.request.method).toBe('PUT');
-    expect(request.request.body).toEqual({ data, output_language: 'English' });
-    request.flush({ id: 'profile-1', user_id: 'user-1', data, output_language: 'English' });
+    expect(request.request.body).toEqual({
+      data,
+      label: 'Default Label',
+      output_language: 'English',
+    });
+    request.flush({
+      id: 'profile-1',
+      user_id: 'user-1',
+      data,
+      label: 'Default Label',
+      output_language: 'English',
+    });
   });
 
   it('uploads a file using the FastAPI UploadFile field name', () => {

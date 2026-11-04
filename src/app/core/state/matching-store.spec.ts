@@ -34,7 +34,13 @@ describe('MatchingStore', () => {
     });
     api = {
       getProfile: vi.fn(() =>
-        of({ id: 'profile-1', user_id: 'user-1', data: {}, output_language: 'English' }),
+        of({
+          id: 'profile-1',
+          user_id: 'user-1',
+          data: {},
+          output_language: 'English',
+          label: 'Default profile',
+        }),
       ),
       listInterests: vi.fn(() => of(interestPage([{ id: 'interest-1', jobId: 'job-1' }]))),
       addInterest: vi.fn(() => of(undefined)),
@@ -153,7 +159,13 @@ describe('MatchingStore', () => {
     const calls: string[] = [];
     api.getProfile.mockImplementation(() => {
       calls.push('profile');
-      return of({ id: 'profile-1', user_id: 'user-1', data: {}, output_language: 'English' });
+      return of({
+        id: 'profile-1',
+        user_id: 'user-1',
+        data: {},
+        output_language: 'English',
+        label: 'Default profile',
+      });
     });
     api.listInterests.mockImplementation(() => {
       calls.push('interests');

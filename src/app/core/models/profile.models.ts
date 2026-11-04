@@ -37,6 +37,7 @@ export interface UserProfile {
   user_id: string;
   data: ProfileData;
   output_language: string;
+  label: string;
 }
 
 export interface ProfileSessionFile {

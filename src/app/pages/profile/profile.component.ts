@@ -55,6 +55,7 @@ export class ProfileComponent implements OnInit {
   protected readonly uploadPreparationError = signal<string | null>(null);
 
   protected readonly form = this.formBuilder.group({
+    label: [''],
     name: [''],
     email: ['', [Validators.email]],
     phone: [''],
@@ -73,6 +74,7 @@ export class ProfileComponent implements OnInit {
         const data = profile.data;
         this.masterProfileData.set({ ...data });
         this.form.patchValue({
+          label: profile.label || '',
           name: stringValue(data['name']),
           email: stringValue(data['email']),
           phone: stringValue(data['phone']),
@@ -143,7 +145,7 @@ export class ProfileComponent implements OnInit {
       source: values.source,
     };
 
-    this.profileStore.saveProfile(data, values.output_language);
+    this.profileStore.saveProfile(data, values.label, values.output_language);
   }
 
   protected skills(): ProfileSkill[] {

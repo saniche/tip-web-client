@@ -111,5 +111,6 @@ function makeProfile(): UserProfile {
     user_id: 'user-1',
     data: {},
     output_language: 'English',
+    label: 'Default profile',
   };
 }

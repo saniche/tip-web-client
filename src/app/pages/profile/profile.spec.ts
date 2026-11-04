@@ -112,6 +112,7 @@ describe('Profile', () => {
     store.profile.set({
       id: 'profile-id',
       user_id: 'user-id',
+      label: 'Ada profile',
       output_language: 'English',
       data: {
         name: 'Ada',
@@ -123,6 +124,12 @@ describe('Profile', () => {
       },
     });
     await createFixture();
+    const labelInput = fixture.nativeElement.querySelector(
+      'input[formControlName="label"]',
+    ) as HTMLInputElement;
+    expect(labelInput.value).toBe('Ada profile');
+    labelInput.value = 'Engineering profile';
+    labelInput.dispatchEvent(new Event('input'));
 
     const addSkill: HTMLButtonElement = fixture.nativeElement.querySelector(
       'app-skills-editor button',
@@ -141,7 +148,7 @@ describe('Profile', () => {
     form.dispatchEvent(new Event('submit'));
     expect(store.saveProfile).toHaveBeenCalledOnce();
 
-    const [data, outputLanguage] = store.saveProfile.mock.calls[0];
+    const [data, label, outputLanguage] = store.saveProfile.mock.calls[0];
     expect(data).toMatchObject({
       name: 'Ada',
       custom_field: 'preserve me',
@@ -150,6 +157,7 @@ describe('Profile', () => {
       education: [],
       work_experiences: [],
     });
+    expect(label).toBe('Engineering profile');
     expect(outputLanguage).toBe('English');
   });
 
@@ -174,6 +182,7 @@ describe('Profile', () => {
     store.profile.set({
       id: 'profile-id',
       user_id: 'user-id',
+      label: 'Ada profile',
       output_language: 'English',
       data: {
         custom_field: 'preserve me',
@@ -222,6 +231,7 @@ describe('Profile', () => {
     store.profile.set({
       id: 'profile-id',
       user_id: 'user-id',
+      label: 'Ada profile',
       output_language: 'English',
       data: {
         custom_field: 'preserve me',
