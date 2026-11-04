@@ -92,8 +92,7 @@ describe('TipApi', () => {
             source: null,
             url: 'https://example.com/job-1',
           },
-          recruiterName: null,
-          recruiterEmail: null,
+          recruiterInfo: { name: null, email: null, phone: null },
           contactDate: null,
           followUpDate: null,
           workAuthorizationDiscussed: null,
@@ -134,8 +133,11 @@ describe('TipApi', () => {
   it('creates an application without sending client-owned status or interest changes', () => {
     const requestData = {
       jobId: 'job-1',
-      recruiterName: 'Avery Recruiter',
-      recruiterEmail: 'avery@example.com',
+      recruiterInfo: {
+        name: 'Avery Recruiter',
+        email: 'avery@example.com',
+        phone: null,
+      },
       contactDate: '2026-10-24',
       followUpDate: '2026-10-31',
       workAuthorizationDiscussed: true,
@@ -149,15 +151,7 @@ describe('TipApi', () => {
 
     const request = http.expectOne(`${environment.baseUrl}/applications/`);
     expect(request.request.method).toBe('POST');
-    expect(request.request.body).toEqual({
-      job_id: 'job-1',
-      recruiter_name: 'Avery Recruiter',
-      recruiter_email: 'avery@example.com',
-      contact_date: '2026-10-24',
-      follow_up_date: '2026-10-31',
-      work_authorization_discussed: true,
-      notes: 'Initial call',
-    });
+    expect(request.request.body).toEqual(requestData);
     request.flush({
       id: 'application-1',
       status: 'NotStarted',
@@ -181,8 +175,7 @@ describe('TipApi', () => {
 
     service
       .updateApplication('application/1', {
-        recruiterName: 'Avery',
-        recruiterEmail: null,
+        recruiterInfo: { name: 'Avery', email: null, phone: null },
         contactDate: null,
         followUpDate: '2026-10-31',
         workAuthorizationDiscussed: false,
@@ -192,11 +185,10 @@ describe('TipApi', () => {
     const patchRequest = http.expectOne(`${environment.baseUrl}/applications/application%2F1/`);
     expect(patchRequest.request.method).toBe('PATCH');
     expect(patchRequest.request.body).toEqual({
-      recruiter_name: 'Avery',
-      recruiter_email: null,
-      contact_date: null,
-      follow_up_date: '2026-10-31',
-      work_authorization_discussed: false,
+      recruiterInfo: { name: 'Avery', email: null, phone: null },
+      contactDate: null,
+      followUpDate: '2026-10-31',
+      workAuthorizationDiscussed: false,
       notes: 'Follow up',
     });
     expect(patchRequest.request.body).not.toHaveProperty('job_id');
@@ -340,6 +332,7 @@ describe('TipApi', () => {
       createdAt: '2026-10-13T12:00:00Z',
       hasWriteAccess: true,
       isInterested: true,
+      isApplied: null,
     });
   });
 

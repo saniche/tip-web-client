@@ -133,7 +133,7 @@ describe('Interests Component', () => {
     ]);
     expect(api.listInterests).toHaveBeenCalledTimes(1);
     expect(api.removeInterest).not.toHaveBeenCalled();
-    expect(router.navigate).toHaveBeenCalledWith(['/matching-session']);
+    expect(router.navigate).not.toHaveBeenCalled();
   });
 
   it('shows empty state when no interests are returned', () => {

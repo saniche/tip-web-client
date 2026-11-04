@@ -30,8 +30,11 @@ const entry: JournalEntry = {
   updatedAt: null,
   status: 'Applied',
   job: { ...job, url: 'https://example.com/job-1' },
-  recruiterName: 'Avery Recruiter',
-  recruiterEmail: 'avery@example.com',
+  recruiterInfo: {
+    name: 'Avery Recruiter',
+    email: 'avery@example.com',
+    phone: null,
+  },
   contactDate: '2026-10-22',
   followUpDate: '2026-10-30',
   workAuthorizationDiscussed: true,
@@ -70,7 +73,10 @@ describe('ApplicationJournalEntry', () => {
     api = {
       getApplication: vi.fn(() => of(entry)),
       createApplication: vi.fn(() => of({ ...entry, id: 'application-new', status: 'NotStarted' })),
-      updateApplication: vi.fn(() => of({ ...entry, recruiterName: 'Updated Recruiter' })),
+      updateApplication: vi.fn(() => of({
+        ...entry,
+        recruiterInfo: { ...entry.recruiterInfo, name: 'Updated Recruiter' },
+      })),
       updateApplicationStatus: vi.fn(() => of(undefined)),
       deleteApplication: vi.fn(() => of(undefined)),
       listNormalizedJobs: vi.fn(() => of(normalizedJobPage)),
@@ -156,8 +162,11 @@ describe('ApplicationJournalEntry', () => {
 
     expect(api.createApplication).toHaveBeenCalledWith({
       jobId: 'job-1',
-      recruiterName: 'Avery',
-      recruiterEmail: 'avery@example.com',
+      recruiterInfo: {
+        name: 'Avery',
+        email: 'avery@example.com',
+        phone: null,
+      },
       contactDate: null,
       followUpDate: null,
       workAuthorizationDiscussed: null,
@@ -176,8 +185,11 @@ describe('ApplicationJournalEntry', () => {
     component['saveEntry']();
 
     expect(api.updateApplication).toHaveBeenCalledWith('application-1', {
-      recruiterName: 'Updated Recruiter',
-      recruiterEmail: 'avery@example.com',
+      recruiterInfo: {
+        name: 'Updated Recruiter',
+        email: 'avery@example.com',
+        phone: null,
+      },
       contactDate: '2026-10-22',
       followUpDate: '2026-10-30',
       workAuthorizationDiscussed: true,

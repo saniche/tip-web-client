@@ -10,10 +10,6 @@ import { TailoredCvStore } from '../../core/state/tailored-cv-store';
 import { AddTailoringJobResult } from '../../core/state/tailoring-store';
 import { NormalizedJobDetail } from './normalized-job-detail';
 
-vi.mock('ngx-sonner', () => ({
-  toast: { success: vi.fn(), info: vi.fn(), warning: vi.fn(), error: vi.fn() },
-}));
-
 const job: JobDetail = {
   id: 'job-1',
   title: 'Engineer',
@@ -40,7 +36,7 @@ const job: JobDetail = {
 describe('Normalized job tailoring action', () => {
   afterEach(() => {
     TestBed.resetTestingModule();
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   async function render(result: AddTailoringJobResult, selectedJob: JobDetail = job) {
@@ -68,6 +64,7 @@ describe('Normalized job tailoring action', () => {
 
   it('adds the current job without navigation and provides a separate session link', async () => {
     const { fixture, addJobFromDetail, navigate, navigateByUrl } = await render('added');
+    const successToast = vi.spyOn(toast, 'success');
     const page = fixture.nativeElement as HTMLElement;
     const button = Array.from(page.querySelectorAll('button')).find((item) =>
       item.textContent?.includes('Add to tailoring'),
@@ -75,7 +72,7 @@ describe('Normalized job tailoring action', () => {
     expect(button).toBeTruthy();
     button!.click();
     expect(addJobFromDetail).toHaveBeenCalledWith(job);
-    expect(toast.success).toHaveBeenCalledWith('Job added to your tailoring session.');
+    expect(successToast).toHaveBeenCalledWith('Job added to your tailoring session.');
     expect(navigate).not.toHaveBeenCalled();
     expect(navigateByUrl).not.toHaveBeenCalled();
     expect(page.textContent).toContain('View tailoring session');
@@ -93,12 +90,14 @@ describe('Normalized job tailoring action', () => {
     ['added-not-saved', 'warning'],
   ] as const)('reports %s without a success toast', async (result, notification) => {
     const { fixture } = await render(result);
+    const notificationToast = vi.spyOn(toast, notification);
+    const successToast = vi.spyOn(toast, 'success');
     const button = Array.from(
       (fixture.nativeElement as HTMLElement).querySelectorAll('button'),
     ).find((item) => item.textContent?.includes('Add to tailoring'));
     button!.click();
-    expect(toast[notification]).toHaveBeenCalledOnce();
-    expect(toast.success).not.toHaveBeenCalled();
+    expect(notificationToast).toHaveBeenCalledOnce();
+    expect(successToast).not.toHaveBeenCalled();
   });
 
   it('does not offer the action for an incomplete job', async () => {

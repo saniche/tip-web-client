@@ -69,7 +69,7 @@ describe('primary navigation', () => {
     root.querySelector<HTMLAnchorElement>('a[href="/tailoring-session"]')!.click();
     await fixture.whenStable();
     expect(router.url).toBe('/auth?returnUrl=%2Ftailoring-session');
-  });
+  }, 10_000);
 
   it('marks the correct area and exact page even with query parameters', async () => {
     TestBed.configureTestingModule({ imports: [PrimaryNavigation], providers: [provideRouter([

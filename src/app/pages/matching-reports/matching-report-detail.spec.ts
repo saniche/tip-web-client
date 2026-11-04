@@ -112,7 +112,8 @@ describe('MatchingReportDetailPage', () => {
 
     expect(page.textContent).toContain('Legacy explanation format');
     expect(page.textContent).not.toContain('Requirements');
-    expect(page.textContent).toContain('—');
+    expect(page.textContent).toContain('Score: Not scored');
+    expect(page.textContent).toContain('"old": "legacy"');
   });
 
   it('shows an empty state for a report without results', () => {

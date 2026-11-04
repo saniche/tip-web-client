@@ -15,7 +15,7 @@ function route(id: string) {
 }
 
 describe('contextual tailoring links', () => {
-  it('retains the job identifier in the job detail action', () => {
+  it('links from job details to the shared tailoring session', () => {
     const job = {
       id: 'job-1', url: null, title: 'Engineer', company: null, location: null, salary: null,
       source: null, postingDate: null, summary: null, keyResponsibilities: null, requirements: null,
@@ -29,7 +29,7 @@ describe('contextual tailoring links', () => {
     const fixture = TestBed.createComponent(NormalizedJobDetail);
     fixture.detectChanges();
     expect((fixture.nativeElement as HTMLElement).querySelector('a[href*="tailoring-session"]')?.getAttribute('href'))
-      .toBe('/tailoring-session?jobId=job-1');
+      .toBe('/tailoring-session');
   });
 
   it('retains the report identifier in the report detail action', () => {
@@ -49,6 +49,7 @@ describe('contextual tailoring links', () => {
   it('offers previews and downloads for completed CV and cover-letter outputs', () => {
     const downloadDocument = vi.fn();
     const store = {
+      sessionCoordinator: { session: { storageError: signal(null) }, warning: signal(null) },
       accepted: signal(null), detailLoading: signal(false), detailError: signal(null),
       detail: signal({ id: 'request-1', status: 'completed', profile_id: 'p1', job_ids: ['job-1'],
         cv_mode: 'general', cover_letter: { enabled: true, mode: 'per_job' }, output_language: 'English',

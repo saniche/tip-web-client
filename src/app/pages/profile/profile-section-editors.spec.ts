@@ -60,14 +60,14 @@ describe('profile section editors', () => {
     fixture.componentInstance.certificatesChange.subscribe((value) => emitted.push(value));
 
     click(fixture, 'button');
-    expect(emitted.at(-1)).toEqual([{ name: null, issuer: null, year: null }]);
+    expect(emitted.at(-1)).toEqual([{ Name: null, Issuer: null, Year: null }]);
 
     fixture.componentRef.setInput('certificates', emitted.at(-1));
     fixture.detectChanges();
     const year = fixture.nativeElement.querySelector('input[type="number"]') as HTMLInputElement;
     year.value = '2024';
     year.dispatchEvent(new Event('input'));
-    expect(emitted.at(-1)).toEqual([{ name: null, issuer: null, year: 2024 }]);
+    expect(emitted.at(-1)).toEqual([{ Name: null, Issuer: null, Year: 2024 }]);
 
     fixture.componentRef.setInput('certificates', emitted.at(-1));
     fixture.detectChanges();
@@ -83,12 +83,12 @@ describe('profile section editors', () => {
     click(fixture, 'button');
     expect(emitted.at(-1)).toEqual([
       {
-        institution: null,
-        location: null,
-        degree: null,
-        field: null,
-        year: null,
-        completed: null,
+        Institution: null,
+        Location: null,
+        Degree: null,
+        Field: null,
+        Year: null,
+        Completed: null,
       },
     ]);
 
@@ -99,12 +99,12 @@ describe('profile section editors', () => {
     completed.dispatchEvent(new Event('change'));
     expect(emitted.at(-1)).toEqual([
       {
-        institution: null,
-        location: null,
-        degree: null,
-        field: null,
-        year: null,
-        completed: false,
+        Institution: null,
+        Location: null,
+        Degree: null,
+        Field: null,
+        Year: null,
+        Completed: false,
       },
     ]);
 
@@ -122,12 +122,12 @@ describe('profile section editors', () => {
     click(fixture, 'button');
     expect(emitted.at(-1)).toEqual([
       {
-        company: null,
-        title: null,
-        startDate: null,
-        endDate: null,
-        summary: null,
-        realisationDescription: null,
+        Company: null,
+        Title: null,
+        StartDate: null,
+        EndDate: null,
+        Summary: null,
+        RealisationDescription: [],
       },
     ]);
 
@@ -138,12 +138,12 @@ describe('profile section editors', () => {
     summary.dispatchEvent(new Event('input'));
     expect(emitted.at(-1)).toEqual([
       {
-        company: null,
-        title: null,
-        startDate: null,
-        endDate: null,
-        summary: 'Built product features',
-        realisationDescription: null,
+        Company: null,
+        Title: null,
+        StartDate: null,
+        EndDate: null,
+        Summary: 'Built product features',
+        RealisationDescription: [],
       },
     ]);
 

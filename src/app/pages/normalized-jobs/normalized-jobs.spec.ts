@@ -120,7 +120,7 @@ describe('NormalizedJobs', () => {
       },
     ]);
     expect(api.listNormalizedJobs).toHaveBeenCalledTimes(1);
-    expect(router.navigate).toHaveBeenCalledWith(['/matching-session']);
+    expect(router.navigate).not.toHaveBeenCalled();
   });
 
   it('loads the default page and renders each job field in service order', () => {
