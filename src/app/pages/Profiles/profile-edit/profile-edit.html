@@ -1,0 +1,102 @@
+<section class="profile-edit">
+  <a [routerLink]="['/profiles', profileId()]">Back to profile details</a>
+  <h1>Edit profile</h1>
+
+  @if (state() === 'loading') {
+    <p role="status">Loading profile…</p>
+  } @else if (state() === 'not-found') {
+    <p class="alert alert-warning" role="status">This profile could not be found.</p>
+  } @else if (state() === 'error') {
+    <p class="alert alert-danger" role="alert">{{ errorMessage() }}</p>
+  }
+
+  @if (state() === 'loaded' && detail()) {
+    @if (errorMessage()) {
+      <p class="alert alert-danger" role="alert">{{ errorMessage() }}</p>
+    }
+    @if (saveMessage()) {
+      <p class="alert alert-success" role="status">{{ saveMessage() }}</p>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="save()">
+      <section class="profile-edit__card">
+        <h2>Contact and summary</h2>
+        <div class="row g-3">
+          <label class="col-12">Profile label<input class="form-control" formControlName="label" /></label>
+          <label class="col-12 col-md-6">Name<input class="form-control" formControlName="name" /></label>
+          <label class="col-12 col-md-6">Email<input class="form-control" type="email" formControlName="email" /></label>
+          <label class="col-12 col-md-6">Phone<input class="form-control" formControlName="phone" /></label>
+          <label class="col-12 col-md-6">Location<input class="form-control" formControlName="location" /></label>
+          <label class="col-12 col-md-6">LinkedIn<input class="form-control" formControlName="linkedin" /></label>
+          <label class="col-12 col-md-6">Output language<input class="form-control" formControlName="output_language" /></label>
+          <label class="col-12">Summary<textarea class="form-control" rows="4" formControlName="summary"></textarea></label>
+        </div>
+      </section>
+
+      <section class="profile-edit__card">
+        <h2>Experience and preferences</h2>
+        <div class="row g-3">
+          <div class="col-12 col-md-6">
+            @if (hasUnsupportedStringListData('soft_skills')) {
+              <p class="alert alert-warning">Saved soft skills contain unsupported values and remain unchanged unless edited here.</p>
+            }
+            <app-string-list-editor title="Soft skills" [items]="softSkills()" (itemsChange)="updateSoftSkills($event)" />
+          </div>
+          <label class="col-12 col-md-6">Total years of experience<input class="form-control" formControlName="total_years_of_experience" /></label>
+          <div class="col-12 col-md-6">
+            @if (hasUnsupportedStringListData('preferred_job_titles')) {
+              <p class="alert alert-warning">Saved preferred job titles contain unsupported values and remain unchanged unless edited here.</p>
+            }
+            <app-string-list-editor title="Preferred job titles" [items]="preferredJobTitles()" (itemsChange)="updatePreferredJobTitles($event)" />
+          </div>
+          <div class="col-12 col-md-6">
+            @if (hasUnsupportedStringListData('preferred_locations')) {
+              <p class="alert alert-warning">Saved preferred locations contain unsupported values and remain unchanged unless edited here.</p>
+            }
+            <app-string-list-editor title="Preferred locations" [items]="preferredLocations()" (itemsChange)="updatePreferredLocations($event)" />
+          </div>
+          <div class="col-12 col-md-6">
+            @if (hasUnsupportedStringListData('languages')) {
+              <p class="alert alert-warning">Saved languages contain unsupported values and remain unchanged unless edited here.</p>
+            }
+            <app-string-list-editor title="Languages" [items]="languages()" (itemsChange)="updateLanguages($event)" />
+          </div>
+          <label class="col-12 col-md-6">Source<input class="form-control" formControlName="source" /></label>
+        </div>
+      </section>
+
+      <section class="profile-edit__card">
+        <h2>Structured profile data</h2>
+        <p>Existing profile keys not shown here are preserved when you save.</p>
+        @if (hasNonListSectionData('core_competences')) {
+          <p class="alert alert-warning">Saved core competences are not a list and remain unchanged unless edited here.</p>
+        }
+        <app-string-list-editor title="Core Competences" [items]="coreCompetences()" (itemsChange)="updateCoreCompetences($event)" />
+        @if (hasNonListSectionData('additional_informations')) {
+          <p class="alert alert-warning">Saved additional informations are not a list and remain unchanged unless edited here.</p>
+        }
+        <app-string-list-editor title="Additional Informations" [items]="additionalInformations()" (itemsChange)="updateAdditionalInformations($event)" />
+        @if (hasNonListSectionData('work_experiences')) {
+          <p class="alert alert-warning">Saved work experiences are not a list and remain unchanged unless edited here.</p>
+        }
+        <app-work-experiences-editor [workExperiences]="workExperiences()" (workExperiencesChange)="updateWorkExperiences($event)" />
+        @if (hasNonListSectionData('skills')) {
+          <p class="alert alert-warning">Saved skills are not a list and remain unchanged unless edited here.</p>
+        }
+        <app-skills-editor [skills]="skills()" (skillsChange)="updateSkills($event)" />
+        @if (hasNonListSectionData('certifications')) {
+          <p class="alert alert-warning">Saved certifications are not a list and remain unchanged unless edited here.</p>
+        }
+        <app-certificates-editor [certificates]="certificates()" (certificatesChange)="updateCertificates($event)" />
+        @if (hasNonListSectionData('education')) {
+          <p class="alert alert-warning">Saved education is not a list and remains unchanged unless edited here.</p>
+        }
+        <app-education-editor [education]="education()" (educationChange)="updateEducation($event)" />
+      </section>
+
+      <button class="btn btn-primary" type="submit" [disabled]="isSaving()">
+        {{ isSaving() ? 'Saving…' : 'Save profile' }}
+      </button>
+    </form>
+  }
+</section>

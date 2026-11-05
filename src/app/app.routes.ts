@@ -199,6 +199,24 @@ export const routes: Routes = [
   },
   
   {
+    path: 'profiles/:id/edit',
+    title: 'Edit profile',
+    data: context('profile', 'Edit profile', { label: 'Profile details', path: '/profiles/:id' }),
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/Profiles/profile-edit/profile-edit').then((page) => page.ProfileEdit),
+  },
+  {
+    path: 'profiles/:id',
+    title: 'Profile details',
+    data: context('profile', 'Profile details', { label: 'Profiles', path: '/profiles' }),
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/Profiles/profile-details/profile-details').then(
+        (page) => page.ProfileDetails,
+      ),
+  },
+  {
     path: 'profiles',
     title: 'My Profiles',
     data: context('profile', 'Profiles'),

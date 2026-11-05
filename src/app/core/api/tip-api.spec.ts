@@ -415,6 +415,28 @@ describe('TipApi', () => {
     });
   });
 
+  it('updates a profile version by encoded identifier with data, label, and output language', () => {
+    const data = { name: 'Ada', skills: ['TypeScript'] };
+    service.updateProfileVersion('profile/1', data, 'Engineering', 'English').subscribe();
+
+    const request = http.expectOne(`${environment.baseUrl}/profiles/profile%2F1`);
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({
+      data,
+      label: 'Engineering',
+      output_language: 'English',
+    });
+    request.flush({
+      id: 'profile/1',
+      label: 'Engineering',
+      output_language: 'English',
+      is_default: false,
+      created_at: '2026-11-01T10:00:00Z',
+      updated_at: '2026-11-02T10:00:00Z',
+      data,
+    });
+  });
+
   it('deletes a profile by encoded identifier', () => {
     service.deleteProfile('profile/1').subscribe();
 

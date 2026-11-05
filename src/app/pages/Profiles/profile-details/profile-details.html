@@ -1,0 +1,44 @@
+<section class="profile-details">
+  <a routerLink="/profiles">Back to profiles</a>
+  <h1>Profile details</h1>
+
+  @if (state() === 'loading') {
+    <p role="status">Loading profile…</p>
+  } @else if (state() === 'not-found') {
+    <p class="alert alert-warning" role="status">This profile could not be found.</p>
+  } @else if (state() === 'error') {
+    <p class="alert alert-danger" role="alert">{{ errorMessage() }}</p>
+  }
+
+  @if (detail(); as profile) {
+    <article class="card">
+      <div class="card-body">
+        <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
+          <div>
+            <h2 class="h4 card-title">{{ profile.label || 'Untitled profile' }}</h2>
+            <p class="mb-1">Output language: {{ profile.output_language || 'Not specified' }}</p>
+            <p class="mb-1">Profile ID: {{ profile.id }}</p>
+            <p class="mb-1">Default profile: {{ profile.is_default ? 'Yes' : 'No' }}</p>
+            <p class="mb-1">Created: {{ profile.created_at }}</p>
+            <p class="mb-0">Updated: {{ profile.updated_at }}</p>
+          </div>
+          <a class="btn btn-primary" [routerLink]="['/profiles', profile.id, 'edit']">Edit profile</a>
+        </div>
+      </div>
+    </article>
+
+    <section class="profile-details__data" aria-labelledby="profile-data-heading">
+      <h2 id="profile-data-heading">Profile information</h2>
+      @for (entry of profileDataEntries(); track entry.key) {
+        <article class="card">
+          <div class="card-body">
+            <h3 class="h6 card-title">{{ entry.label }}</h3>
+            <pre class="mb-0 profile-details__value">{{ entry.value }}</pre>
+          </div>
+        </article>
+      } @empty {
+        <p>No profile information is available.</p>
+      }
+    </section>
+  }
+</section>

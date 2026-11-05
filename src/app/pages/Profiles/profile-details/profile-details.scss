@@ -1,0 +1,18 @@
+.profile-details {
+  display: grid;
+  gap: 1rem;
+}
+
+.profile-details__data {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.profile-details__data h2 {
+  margin-bottom: 0;
+}
+
+.profile-details__value {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}

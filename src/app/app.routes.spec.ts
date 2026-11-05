@@ -13,6 +13,9 @@ class RouteTestPage {}
 const publicPaths = ['', 'dashboard', 'normalized-jobs', 'auth', 'auth/register', '**'];
 const protectedUrls = [
   '/profile',
+  '/profiles',
+  '/profiles/profile-1',
+  '/profiles/profile-1/edit',
   '/jobs',
   '/jobs/interests',
   '/normalize-job',

@@ -170,6 +170,18 @@ export class TipApi {
     return this.http.get<ProfileVersionDetail>(`${this.baseUrl}/profiles/${encodeURIComponent(id)}`);
   }
 
+  updateProfileVersion(
+    id: string,
+    data: ProfileVersionDetail['data'],
+    label: string,
+    output_language: string,
+  ): Observable<ProfileVersionDetail> {
+    return this.http.put<ProfileVersionDetail>(
+      `${this.baseUrl}/profiles/${encodeURIComponent(id)}`,
+      { data, label, output_language },
+    );
+  }
+
   deleteProfile(id: string): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/profiles/${encodeURIComponent(id)}`);
   }
