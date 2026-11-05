@@ -170,6 +170,10 @@ export class TipApi {
     return this.http.get<ProfileVersionDetail>(`${this.baseUrl}/profiles/${encodeURIComponent(id)}`);
   }
 
+  deleteProfile(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/profiles/${encodeURIComponent(id)}`);
+  }
+
   createTailoring(payload: TailoringInput): Observable<TailoringProcess> {
     return this.http.post<TailoringProcess>(`${this.baseUrl}/tailoring`, payload);
   }

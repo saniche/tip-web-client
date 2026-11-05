@@ -415,6 +415,14 @@ describe('TipApi', () => {
     });
   });
 
+  it('deletes a profile by encoded identifier', () => {
+    service.deleteProfile('profile/1').subscribe();
+
+    const request = http.expectOne(`${environment.baseUrl}/profiles/profile%2F1`);
+    expect(request.request.method).toBe('DELETE');
+    request.flush(null);
+  });
+
   it('uploads a file using the FastAPI UploadFile field name', () => {
     const file = new File(['resume'], 'resume.md', { type: 'text/markdown' });
     service.uploadProfileFile('session/1', file).subscribe();

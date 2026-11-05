@@ -1,0 +1,53 @@
+<div class="card">
+  <div class="card-body">
+    <h1 class="h5 card-title">Profiles list</h1>
+    <p class="card-text">View and manage your profiles</p>
+    <a href="/profile" class="btn btn-primary mb-3">Go to current default profile</a>
+    @if (deleteError(); as error) {
+      <p class="alert alert-danger" role="alert">{{ error }}</p>
+    }
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+      @for (item of profiles(); track item.id) {
+        <div class="col">
+          <div class="card h-100">
+            <div class="card-body">
+              <h2 class="h5 card-title">{{ item.label || 'Untitled profile' }}</h2>
+              <p class="card-text">Output language: {{ item.output_language }}</p>
+              <p class="card-text">Created: {{ item.created_at }}</p>
+              <p class="card-text">Profile ID: {{ item.id }}</p>
+              <div class="d-flex gap-2">
+                <a [href]="'/profiles/' + item.id" class="btn btn-outline-primary btn-md">View profile</a>
+                <button
+                  type="button"
+                  class="btn btn-outline-danger btn-md"
+                  [attr.data-testid]="'delete-profile-' + item.id"
+                  [disabled]="deletingProfile()"
+                  (click)="requestDelete(item, confirmation)"
+                >
+                  Delete profile
+                </button>
+              </div>
+            </div>
+          </div>
+          </div>
+        }
+    </div>
+  </div>
+</div>
+
+<ng-template #confirmation let-modal>
+  <div class="modal-header">
+    <h2 class="modal-title fs-5" id="delete-profile-title">Confirm profile deletion</h2>
+  </div>
+  <div class="modal-body">
+    <p class="mb-0">
+      Are you sure you want to delete
+      <strong>{{ pendingDeleteProfile()?.label || 'this profile' }}</strong>?
+      This action cannot be undone.
+    </p>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" (click)="modal.close(false)">Cancel</button>
+    <button type="button" class="btn btn-danger" (click)="modal.close(true)">Delete profile</button>
+  </div>
+</ng-template>

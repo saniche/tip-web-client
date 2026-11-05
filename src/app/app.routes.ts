@@ -197,6 +197,17 @@ export const routes: Routes = [
     canActivate: [authGuard],
     component: ProfileComponent,
   },
+  
+  {
+    path: 'profiles',
+    title: 'My Profiles',
+    data: context('profile', 'Profiles'),
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/Profiles/profile-list/profile-list').then(
+        (page) => page.ProfileList,
+      ),
+  },
   {
     path: '**',
     redirectTo: 'dashboard',
