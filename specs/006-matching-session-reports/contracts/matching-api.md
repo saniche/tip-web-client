@@ -1,8 +1,8 @@
 # Matching API Contract Inventory
 
-**Status**: Provisional frontend contract based on the user-provided feature brief. The user confirmed that no backend OpenAPI/schema is available and asked to proceed with this model.
+**Status**: Mostly provisional frontend contract based on the original feature brief. Profile selection behavior was subsequently confirmed against the neighboring `job-process-api` backend source and tests; other assumptions below remain provisional.
 
-The workspace contains no backend source. Matching/report methods are implemented in `TipApi` from this provisional inventory, but the routes and shapes are not independently verified against server code. Implement only the fields and behaviors described here; surface invalid or missing data explicitly. The assumptions below are provisional and must not be represented as confirmed backend guarantees.
+Matching/report methods are implemented in `TipApi` from this inventory. Except for the profile-selection behavior noted below, the assumptions are provisional and must not be represented as confirmed backend guarantees for a deployed server.
 
 ## Existing Frontend Operations
 
@@ -13,6 +13,7 @@ The workspace contains no backend source. Matching/report methods are implemente
 | List interests            | `TipApi.listInterests` calls `GET /jobs/interests`; paginated `items`, `limit`, `total`, `page`.              | Existing API, already modeled.                                                                                                                                               |
 | Add an interest           | `TipApi.addInterest(jobId)` calls `POST /jobs/{id}/interest` and is typed `Observable<void>`.                 | Backend behavior for duplicate adds and independent failures is not established by the frontend type.                                                                        |
 | Read profile              | `TipApi.getProfile()` calls `GET /profile`; `UserProfile` has `id`, `user_id`, `data`, and `output_language`. | No explicit frontend built/readiness field. The client checks availability only; matching readiness remains backend-authoritative.                                           |
+| List and check profiles   | `TipApi.listProfiles()` and `getProfileVersion(id)` call `GET /profiles` and `GET /profiles/{id}`. | The selector uses owned profile summaries; the selected profile is checked before submission. |
 | Read processing operation | `TipApi.getProcessingJob(id)` calls `GET /processing-jobs/{id}` and maps through normalization types.         | Current mapper recognizes normalization statuses and converts unknown status values to `pending`; do not use this mapping for matching. Preserve behavior for normalization. |
 
 ## Implemented Provisional Matching Operations
@@ -20,11 +21,12 @@ The workspace contains no backend source. Matching/report methods are implemente
 ### Submit matching
 
 - **Method/path**: `POST /matching/`
-- **Request described in brief**: `{ "job_ids": ["string"] }`
+- **Request**: `{ "job_ids": ["string"], "profile_id": "string" }`; `profile_id` is optional on the server. The matching-session UI always sends the selected ID; callers that omit it retain the legacy request shape.
 - **Response described in brief**: processing `id`, `status`, optional/null `result_id`, optional/null `error`.
 - **Known product constraint**: one accepted call creates exactly one report.
-- **Known from brief**: one accepted call creates exactly one report; the request contains only `job_ids`; the response describes `id`, `status`, `result_id`, and `error`.
-- **Unresolved**: exact nullability and error behavior, terminal initial statuses, server-side interest prerequisite, batch-size limit and exposure, and whether a lost response can leave acceptance ambiguous. Do not split a request; surface rejection for user action.
+- **Profile errors**: the neighboring backend rejects unknown, deleted, and foreign profiles with HTTP 404 and `error.message` equal to `Profile not found`. The client displays a profile-specific recovery message for that response, without treating other 404s or authorization failures as profile errors.
+- **Known from brief**: one accepted call creates exactly one report; the response describes `id`, `status`, `result_id`, and `error`.
+- **Unresolved**: other error behavior, exact nullability, terminal initial statuses, server-side interest prerequisite, batch-size limit and exposure, and whether a lost response can leave acceptance ambiguous. Do not split a request; surface rejection for user action.
 
 ### Read matching process
 
@@ -61,4 +63,4 @@ The workspace contains no backend source. Matching/report methods are implemente
 
 ## Provisional Implementation Rules
 
-The user directed implementation to proceed using the provided model despite the absence of backend schemas. Use explicit fields and statuses from the brief and the labeled array assumption above only for report listing. Do not infer report terminal values from process statuses, infer duplicate-interest success from an error, infer profile readiness from data content, or infer a batch limit. Report detail current-format rendering requires full structural validation; all other explanations use a safe legacy display. If runtime behavior disagrees with the provisional contract or requires an unprovided field/value, show a recoverable error and document the limitation; do not add backend changes or success-shaped defaults.
+The original implementation proceeded from the provided model without backend schemas. Except for the profile-selection behavior confirmed above, use explicit fields and statuses from the brief and the labeled array assumption above only for report listing. Do not infer report terminal values from process statuses, infer duplicate-interest success from an error, infer profile readiness from data content, or infer a batch limit. Report detail current-format rendering requires full structural validation; all other explanations use a safe legacy display. If runtime behavior disagrees with the provisional contract or requires an unprovided field/value, show a recoverable error and document the limitation; do not add backend changes or success-shaped defaults.

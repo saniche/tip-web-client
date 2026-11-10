@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { HttpErrorResponse } from '@angular/common/http';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { of, Subject, throwError } from 'rxjs';
 import { TipApi } from '../api/tip-api';
@@ -17,7 +18,7 @@ const authProvider = { provide: AuthStore, useValue: {
 describe('MatchingStore', () => {
   let store: MatchingStore;
   let api: {
-    getProfile: ReturnType<typeof vi.fn>;
+    getProfileVersion: ReturnType<typeof vi.fn>;
     listInterests: ReturnType<typeof vi.fn>;
     addInterest: ReturnType<typeof vi.fn>;
     submitMatching: ReturnType<typeof vi.fn>;
@@ -33,7 +34,7 @@ describe('MatchingStore', () => {
       removeItem: (key: string) => records.delete(key),
     });
     api = {
-      getProfile: vi.fn(() =>
+      getProfileVersion: vi.fn(() =>
         of({
           id: 'profile-1',
           user_id: 'user-1',
@@ -98,6 +99,7 @@ describe('MatchingStore', () => {
 
   it('restores a valid open user session from storage', () => {
     store.addJob(selection('job-1', 'normalized-jobs'));
+    store.selectProfile('profile-2');
     const savedId = store.session()?.id;
 
     TestBed.resetTestingModule();
@@ -108,6 +110,40 @@ describe('MatchingStore', () => {
 
     expect(store.session()?.id).toBe(savedId);
     expect(store.session()?.selectedJobs[0]?.jobId).toBe('job-1');
+    expect(store.session()?.profileId).toBe('profile-2');
+  });
+
+  it('migrates a saved session without a profile selection', () => {
+    store.addJob(selection('job-1', 'normalized-jobs'));
+    const stored = localStorage.getItem(storageKey);
+    if (!stored) throw new Error('Expected a persisted matching session.');
+    const savedSession = (JSON.parse(stored) as { data: Record<string, unknown> }).data;
+    delete savedSession['profileId'];
+    writeUserStorage(owner, MATCHING_SESSION_STORAGE_KEY, savedSession);
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [MatchingStore, { provide: TipApi, useValue: api }, authProvider],
+    });
+    store = TestBed.inject(MatchingStore);
+    expect(store.session()?.profileId).toBeNull();
+    expect(store.session()?.selectedJobs[0]?.jobId).toBe('job-1');
+  });
+
+  it('rejects invalid saved profile identifiers', () => {
+    store.addJob(selection('job-1', 'normalized-jobs'));
+    const stored = localStorage.getItem(storageKey);
+    if (!stored) throw new Error('Expected a persisted matching session.');
+    const savedSession = (JSON.parse(stored) as { data: Record<string, unknown> }).data;
+    savedSession['profileId'] = '   ';
+    writeUserStorage(owner, MATCHING_SESSION_STORAGE_KEY, savedSession);
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [MatchingStore, { provide: TipApi, useValue: api }, authProvider],
+    });
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    store = TestBed.inject(MatchingStore);
+    expect(store.session()).toBeNull();
+    expect(store.storageError()).toContain('invalid');
   });
 
   it('migrates a previously stored unknown process status into the recovery field', () => {
@@ -151,13 +187,58 @@ describe('MatchingStore', () => {
     expect(store.beginSubmission()).toBe(true);
     expect(store.addJob(selection('job-2', 'my-interests'))).toBe(false);
     expect(store.removeJob('job-1')).toBe(false);
+    expect(store.selectProfile('profile-2')).toBe(false);
     expect(store.requestDiscard()).toBe(false);
     expect(store.session()?.selectedJobs).toHaveLength(1);
   });
 
+  it('does not confirm without a profile and submits the chosen profile after interest synchronization', () => {
+    store.addJob(selection('job-1', 'normalized-jobs'));
+    store.confirmMatching();
+    expect(api.getProfileVersion).not.toHaveBeenCalled();
+    api.getProfileVersion.mockReturnValue(of({ id: 'profile-2' }));
+    store.selectProfile('profile-2');
+    store.confirmMatching();
+    expect(api.getProfileVersion).toHaveBeenCalledWith('profile-2');
+    expect(api.submitMatching).toHaveBeenCalledWith(['job-1'], 'profile-2');
+  });
+
+  it('shows a recoverable message for an unavailable profile before and during submission', () => {
+    const missing = new HttpErrorResponse({
+      status: 404,
+      error: { error: { message: 'Profile not found' } },
+    });
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    store.addJob(selection('job-1', 'normalized-jobs'));
+    store.selectProfile('profile-1');
+    api.getProfileVersion.mockReturnValueOnce(throwError(() => missing));
+    store.confirmMatching();
+    expect(store.session()?.state).toBe('open');
+    expect(store.session()?.processingError).toContain('selected profile is no longer available');
+    expect(api.submitMatching).not.toHaveBeenCalled();
+
+    api.submitMatching.mockReturnValueOnce(throwError(() => missing));
+    store.confirmMatching();
+    expect(store.session()?.state).toBe('open');
+    expect(store.session()?.processingError).toContain('selected profile is no longer available');
+    expect(api.submitMatching).toHaveBeenCalledOnce();
+  });
+
+  it('does not mislabel unrelated HTTP failures as missing profiles', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    api.submitMatching.mockReturnValue(throwError(() => new HttpErrorResponse({
+      status: 403, error: { error: { message: 'Access denied' } },
+    })));
+    store.addJob(selection('job-1', 'normalized-jobs'));
+    confirmMatching(store);
+    expect(store.session()?.processingError).toContain('Check report history before retrying');
+    expect(store.session()?.processingError).toContain('HTTP 403');
+    expect(store.session()?.processingError).not.toContain('selected profile');
+  });
+
   it('rechecks the profile and submits once after refreshing existing interests', () => {
     const calls: string[] = [];
-    api.getProfile.mockImplementation(() => {
+    api.getProfileVersion.mockImplementation(() => {
       calls.push('profile');
       return of({
         id: 'profile-1',
@@ -178,7 +259,7 @@ describe('MatchingStore', () => {
     });
     store.addJob(selection('job-1', 'normalized-jobs'));
 
-    store.confirmMatching();
+    confirmMatching(store);
 
     expect(calls).toEqual(['profile', 'interests', 'interests', 'submit']);
     expect(api.addInterest).not.toHaveBeenCalled();
@@ -195,10 +276,10 @@ describe('MatchingStore', () => {
     store.addJob(selection('job-1', 'normalized-jobs'));
     store.addJob(selection('job-2', 'my-interests'));
 
-    store.confirmMatching();
+    confirmMatching(store);
 
     expect(api.addInterest).toHaveBeenCalledOnce();
-    expect(api.submitMatching).toHaveBeenCalledWith(['job-1']);
+    expect(api.submitMatching).toHaveBeenCalledWith(['job-1'], 'profile-1');
     expect(store.summary()?.notSubmittedJobs).toEqual([
       { jobId: 'job-2', reason: 'permission denied' },
     ]);
@@ -209,12 +290,12 @@ describe('MatchingStore', () => {
     api.addInterest.mockReturnValue(throwError(() => new Error('denied')));
     store.addJob(selection('job-1', 'normalized-jobs'));
 
-    store.confirmMatching();
+    confirmMatching(store);
 
     expect(api.submitMatching).not.toHaveBeenCalled();
     expect(store.session()?.state).toBe('open');
     expect(store.session()?.notSubmittedJobs).toEqual([{ jobId: 'job-1', reason: 'denied' }]);
-    store.confirmMatching();
+    confirmMatching(store);
     expect(api.addInterest).toHaveBeenCalledOnce();
   });
 
@@ -224,8 +305,8 @@ describe('MatchingStore', () => {
     api.getMatchingProcess.mockReturnValue(of(processResponse('queued-by-server')));
     store.addJob(selection('job-1', 'my-interests', 'known-in-interest'));
 
-    store.confirmMatching();
-    store.confirmMatching();
+    confirmMatching(store);
+    confirmMatching(store);
     await vi.advanceTimersByTimeAsync(4000);
 
     expect(api.submitMatching).toHaveBeenCalledOnce();
@@ -243,7 +324,7 @@ describe('MatchingStore', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     store.addJob(selection('job-1', 'my-interests', 'known-in-interest'));
 
-    store.confirmMatching();
+    confirmMatching(store);
     await vi.advanceTimersByTimeAsync(0);
 
     expect(store.session()?.lastConfirmedStatus).toBe('pending');
@@ -262,7 +343,7 @@ describe('MatchingStore', () => {
     });
     store.addJob(selection('job-1', 'my-interests', 'known-in-interest'));
 
-    store.confirmMatching();
+    confirmMatching(store);
     await vi.advanceTimersByTimeAsync(0);
     await vi.advanceTimersByTimeAsync(4000);
     expect(api.getMatchingProcess).toHaveBeenCalledOnce();
@@ -278,7 +359,7 @@ describe('MatchingStore', () => {
     api.submitMatching.mockReturnValue(of(processResponse('pending')));
     api.getMatchingProcess.mockReturnValue(of(processResponse('running')));
     store.addJob(selection('job-1', 'my-interests', 'known-in-interest'));
-    store.confirmMatching();
+    confirmMatching(store);
     await vi.advanceTimersByTimeAsync(0);
     expect(api.getMatchingProcess).toHaveBeenCalledOnce();
 
@@ -297,7 +378,7 @@ describe('MatchingStore', () => {
     api.submitMatching.mockReturnValue(of(processResponse('pending')));
     api.getMatchingProcess.mockReturnValue(of({ ...processResponse('done'), id: 'stale-process' }));
     store.addJob(selection('job-1', 'my-interests', 'known-in-interest'));
-    store.confirmMatching();
+    confirmMatching(store);
     await vi.advanceTimersByTimeAsync(0);
 
     expect(store.session()?.lastConfirmedStatus).toBe('pending');
@@ -312,7 +393,7 @@ describe('MatchingStore', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     store.addJob(selection('job-1', 'my-interests', 'known-in-interest'));
 
-    store.confirmMatching();
+    confirmMatching(store);
 
     expect(store.summary()?.reportLoadState).toBe('failed');
     store.retryReportLoad();
@@ -325,7 +406,7 @@ describe('MatchingStore', () => {
     vi.useFakeTimers();
     api.submitMatching.mockReturnValue(of(processResponse('pending')));
     store.addJob(selection('job-1', 'my-interests', 'known-in-interest'));
-    store.confirmMatching();
+    confirmMatching(store);
     store.stopTracking();
 
     TestBed.resetTestingModule();
@@ -347,7 +428,7 @@ describe('MatchingStore', () => {
     );
     store.addJob(selection('job-1', 'my-interests', 'known-in-interest'));
 
-    store.confirmMatching();
+    confirmMatching(store);
 
     expect(store.summary()?.processStatus).toBe('done');
     expect(store.summary()?.reportLoadState).toBe('unavailable');
@@ -365,7 +446,7 @@ describe('MatchingStore', () => {
     store.addJob(selection('job-1', 'my-interests', 'known-in-interest'));
     store.addJob(selection('job-2', 'normalized-jobs'));
 
-    store.confirmMatching();
+    confirmMatching(store);
 
     expect(store.summary()?.submittedJobIds).toEqual(['job-1']);
     expect(store.summary()?.retryableJobs.map((job) => job.jobId)).toEqual(['job-2']);
@@ -385,7 +466,7 @@ describe('MatchingStore', () => {
     store.addJob(selection('job-1', 'my-interests', 'known-in-interest'));
     store.addJob(selection('job-2', 'normalized-jobs'));
 
-    store.confirmMatching();
+    confirmMatching(store);
 
     expect(store.summary()?.processStatus).toBe('done');
     expect(store.summary()?.retryableJobs.map((job) => job.jobId)).toEqual(['job-2']);
@@ -406,6 +487,13 @@ describe('MatchingStore', () => {
     expect(store.storageError()).toContain('invalid');
   });
 });
+
+function confirmMatching(store: MatchingStore): void {
+  if (store.session()?.state === 'open' && !store.session()?.profileId) {
+    store.selectProfile('profile-1');
+  }
+  store.confirmMatching();
+}
 
 function selection(
   jobId: string,

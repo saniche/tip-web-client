@@ -150,9 +150,39 @@
 
       <section class="matching-session__profile" aria-label="Profile availability">
         @if (profileAvailability() === 'loading') {
-          <p role="status">Checking profile availability…</p>
+          <p role="status">Loading profiles…</p>
         } @else if (profileAvailability() === 'available') {
-          <p>Your profile is available. Matching will validate profile readiness.</p>
+          @if (profileChoiceRequired()) {
+            <p class="alert alert-warning" role="alert">
+              @if (activeSession.profileId) {
+                Your previously selected profile is no longer available. Choose a profile to continue.
+              } @else {
+                No default profile is available. Choose a profile to continue.
+              }
+            </p>
+          }
+          @if (profiles().length > 1 || profileChoiceRequired()) {
+            <label for="matching-profile" class="form-label">Profile for matching</label>
+            <select
+              id="matching-profile"
+              class="form-select"
+              [disabled]="activeSession.state !== 'open'"
+              (change)="selectProfile($event)"
+            >
+              <option value="" disabled [selected]="!selectedProfileId()">Choose a profile</option>
+              @for (profile of profiles(); track profile.id) {
+                <option [value]="profile.id" [selected]="profile.id === selectedProfileId()">
+                  {{ profile.label || profile.id }}{{ profile.is_default ? ' (default)' : '' }}
+                </option>
+              }
+            </select>
+          }
+          <p>Matching will validate profile readiness.</p>
+          @if (activeSession.state === 'open') {
+            <button class="btn btn-outline-secondary" type="button" (click)="retryProfileCheck()">
+              Refresh profiles
+            </button>
+          }
         } @else if (profileAvailability() === 'missing') {
           <div class="alert alert-warning" role="alert">
             <p>No profile was found. Create a profile before starting matching.</p>
@@ -168,7 +198,7 @@
         }
       </section>
 
-      @if (confirmationMessage()) {
+      @if (confirmationMessage() && activeSession.state !== 'open') {
         <p class="alert alert-info" role="status">{{ confirmationMessage() }}</p>
       }
       @if (activeSession.state === 'submitting') {
