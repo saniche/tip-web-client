@@ -45,6 +45,14 @@ describe('Matching API operations', () => {
     });
   });
 
+  it('includes the selected profile identifier when supplied', () => {
+    service.submitMatching(['job-1'], 'profile-2').subscribe();
+
+    const request = http.expectOne(`${environment.baseUrl}/matching/`);
+    expect(request.request.body).toEqual({ job_ids: ['job-1'], profile_id: 'profile-2' });
+    request.flush({ id: 'process-1', status: 'pending', result_id: null, error: null });
+  });
+
   it('retrieves a matching process by process identifier and preserves unknown statuses', () => {
     let result: unknown;
 

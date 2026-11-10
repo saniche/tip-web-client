@@ -79,6 +79,7 @@ export interface NotSubmittedMatchingJob {
 export interface MatchingSession {
   id: string;
   state: MatchingSessionStatus;
+  profileId: string | null;
   selectedJobs: SelectedMatchingJob[];
   submittedJobIds: string[];
   interestAddAttemptedJobIds: string[];

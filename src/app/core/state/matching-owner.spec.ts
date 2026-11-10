@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { Subject, of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TipApi } from '../api/tip-api';
-import { UserProfile } from '../models/profile.models';
+import { ProfileVersionDetail } from '../models/tailored-cv';
 import { AuthStore } from './auth-store';
 import { MatchingStore } from './matching-store';
 
@@ -11,7 +11,7 @@ describe('MatchingStore account isolation', () => {
   const session = signal<{ token: string | null; user: { email: string } | null }>({
     token: 'token-a', user: { email: 'a@example.test' },
   });
-  let profile: Subject<UserProfile>;
+  let profile: Subject<ProfileVersionDetail>;
   let listInterests: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
@@ -22,12 +22,12 @@ describe('MatchingStore account isolation', () => {
       setItem: (key: string, value: string) => records.set(key, value),
       removeItem: (key: string) => records.delete(key),
     });
-    profile = new Subject<UserProfile>();
+    profile = new Subject<ProfileVersionDetail>();
     listInterests = vi.fn(() => of({ items: [], page: 1, limit: 20, total: 0 }));
     TestBed.configureTestingModule({
       providers: [
         { provide: AuthStore, useValue: { authSession: session } },
-        { provide: TipApi, useValue: { getProfile: () => profile, listInterests } },
+        { provide: TipApi, useValue: { getProfileVersion: () => profile, listInterests } },
       ],
     });
   });
@@ -43,14 +43,17 @@ describe('MatchingStore account isolation', () => {
       jobId: 'job-a', title: null, company: null, location: null, source: null,
       entrySource: 'normalized-jobs', interestState: 'unknown',
     });
+    store.selectProfile('profile-a');
     store.confirmMatching();
     session.set({ token: null, user: null });
     profile.next({
       id: 'profile-a',
-      user_id: 'a',
       data: {},
       output_language: 'English',
       label: 'Profile A',
+      is_default: true,
+      created_at: '',
+      updated_at: '',
     });
     expect(listInterests).not.toHaveBeenCalled();
     TestBed.tick();
@@ -71,6 +74,7 @@ describe('MatchingStore account isolation', () => {
       jobId: 'job-a', title: null, company: null, location: null, source: null,
       entrySource: 'normalized-jobs', interestState: 'unknown',
     });
+    store.selectProfile('profile-a');
     store.confirmMatching();
     session.set({ token: null, user: null });
     TestBed.tick();
@@ -80,10 +84,12 @@ describe('MatchingStore account isolation', () => {
     store.confirmMatching();
     profile.next({
       id: 'profile-a',
-      user_id: 'a',
       data: {},
       output_language: 'English',
       label: 'Profile A',
+      is_default: true,
+      created_at: '',
+      updated_at: '',
     });
     expect(store.session()?.id).toBe(restoredId);
     expect(listInterests).toHaveBeenCalledTimes(1);

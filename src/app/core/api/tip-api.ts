@@ -128,9 +128,12 @@ export class TipApi {
       .pipe(map(mapProcessingJob));
   }
 
-  submitMatching(jobIds: string[]): Observable<MatchingProcess> {
+  submitMatching(jobIds: string[], profileId?: string): Observable<MatchingProcess> {
     return this.http
-      .post<unknown>(`${this.baseUrl}/matching/`, { job_ids: jobIds })
+      .post<unknown>(`${this.baseUrl}/matching/`, {
+        job_ids: jobIds,
+        ...(profileId === undefined ? {} : { profile_id: profileId }),
+      })
       .pipe(map(mapMatchingProcessResponse));
   }
 

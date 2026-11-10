@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import { EMPTY, Observable, Subject, Subscription, forkJoin, merge, of, timer } from 'rxjs';
 import { catchError, concatMap, exhaustMap, map, takeUntil } from 'rxjs/operators';
@@ -35,6 +36,7 @@ function createSession(): MatchingSession {
   return {
     id: createSessionId(),
     state: 'open',
+    profileId: null,
     selectedJobs: [],
     submittedJobIds: [],
     interestAddAttemptedJobIds: [],
@@ -90,6 +92,9 @@ function isMatchingSession(value: unknown): value is MatchingSession {
     typeof value['id'] === 'string' &&
     value['id'].trim().length > 0 &&
     (status === 'open' || status === 'submitting' || status === 'processing') &&
+    (value['profileId'] === undefined ||
+      value['profileId'] === null ||
+      isNonEmptyString(value['profileId'])) &&
     selectedIds !== null &&
     new Set(selectedIds).size === selectedIds.length &&
     Array.isArray(value['submittedJobIds']) &&
@@ -147,6 +152,20 @@ function describeError(error: unknown, fallback: string): string {
   }
   return fallback;
 }
+
+function isMissingProfileError(error: unknown): boolean {
+  if (!(error instanceof HttpErrorResponse) || error.status !== 404 || !isRecord(error.error)) {
+    return false;
+  }
+  const body = error.error;
+  return (
+    (isRecord(body['error']) && body['error']['message'] === 'Profile not found') ||
+    body['detail'] === 'Profile not found'
+  );
+}
+
+const MISSING_PROFILE_MESSAGE =
+  'The selected profile is no longer available or does not belong to your account. Refresh the profile list and choose another profile.';
 
 @Injectable({ providedIn: 'root' })
 export class MatchingStore {
@@ -256,6 +275,15 @@ export class MatchingStore {
     return true;
   }
 
+  selectProfile(profileId: string): boolean {
+    const session = this.session();
+    if (!session || session.state !== 'open' || !isNonEmptyString(profileId)) {
+      return false;
+    }
+    this.updateSession({ ...session, profileId, processingError: null });
+    return true;
+  }
+
   beginSubmission(): boolean {
     const session = this.session();
     if (!session || session.state !== 'open') {
@@ -304,7 +332,12 @@ export class MatchingStore {
 
   confirmMatching(): void {
     const session = this.session();
-    if (!session || session.state !== 'open' || session.selectedJobs.length === 0) {
+    if (
+      !session ||
+      session.state !== 'open' ||
+      session.selectedJobs.length === 0 ||
+      !session.profileId
+    ) {
       return;
     }
     if (!this.beginSubmission()) {
@@ -313,16 +346,26 @@ export class MatchingStore {
 
     const sessionId = session.id;
     const token = this.token;
-    this.api.getProfile().pipe(takeUntil(this.ownerChanged)).subscribe({
-      next: () => {
-        if (this.isRequestCurrent(token) && this.session()?.id === sessionId) this.prepareInterests(sessionId);
+    this.api.getProfileVersion(session.profileId).pipe(takeUntil(this.ownerChanged)).subscribe({
+      next: (profile) => {
+        if (!this.isRequestCurrent(token) || this.session()?.id !== sessionId) return;
+        if (profile.id !== session.profileId) {
+          this.failPreparation(
+            sessionId,
+            'The service returned a different profile. Refresh the profile list and try again.',
+          );
+          return;
+        }
+        this.prepareInterests(sessionId);
       },
       error: (error: unknown) => {
         if (!this.isRequestCurrent(token)) return;
         console.error(error);
         this.failPreparation(
           sessionId,
-          describeError(error, 'The profile could not be verified. No matching request was sent.'),
+          isMissingProfileError(error)
+            ? MISSING_PROFILE_MESSAGE
+            : describeError(error, 'The profile could not be verified. No matching request was sent.'),
         );
       },
     });
@@ -573,7 +616,11 @@ export class MatchingStore {
     }
 
     const token = this.token;
-    this.api.submitMatching(eligibleJobIds).pipe(takeUntil(this.ownerChanged)).subscribe({
+    if (!session.profileId) {
+      this.failPreparation(sessionId, 'Choose a profile before starting matching.');
+      return;
+    }
+    this.api.submitMatching(eligibleJobIds, session.profileId).pipe(takeUntil(this.ownerChanged)).subscribe({
       next: (process) => {
         if (!this.isRequestCurrent(token)) return;
         const current = this.session();
@@ -604,10 +651,11 @@ export class MatchingStore {
         this.updateSession({
           ...current,
           state: 'open',
-          processingError: describeError(
-            error,
-            'The matching request could not be confirmed. Check report history before retrying.',
-          ),
+          processingError: isMissingProfileError(error)
+            ? MISSING_PROFILE_MESSAGE
+            : error instanceof HttpErrorResponse
+              ? `The matching request could not be confirmed${error.status ? ` (HTTP ${error.status})` : ''}. Check report history before retrying.`
+              : describeError(error, 'The matching request could not be confirmed. Check report history before retrying.'),
           notSubmittedJobs,
         });
       },
@@ -847,6 +895,7 @@ export class MatchingStore {
           : null;
       const restored = {
         ...parsed,
+        profileId: parsed.profileId ?? null,
         lastConfirmedStatus: recognizedStatus,
         unrecognizedStatus:
           typeof parsed.unrecognizedStatus === 'string'
