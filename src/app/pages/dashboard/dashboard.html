@@ -1,23 +1,202 @@
-<section class="dashboard-hero row g-4 align-items-end">
-  <div class="col-12 col-xl-8">
-    <p class="dashboard-kicker">Signal-first workflow</p>
-    <h1>Manage authentication and job delivery from normalization to application.</h1>
-    <p>
-      This starter keeps view state in Angular signals and leaves the HTTP boundary isolated for the
-      backend integration.
-    </p>
+<section class="dashboard-hero">
+  <div class="dashboard-next" data-testid="next-step">
+    <div>
+      <p class="dashboard-kicker">Next step</p>
+      <h1>{{ nextStep().message }}</h1>
+    </div>
+    <a class="btn btn-primary" [routerLink]="nextStep().link" data-testid="next-step-action">
+      {{ nextStep().actionLabel }}
+    </a>
   </div>
 
-  <div class="dashboard-actions col-12 col-xl-4">
-    <a class="btn btn-primary" routerLink="/auth">Open auth flow</a>
-    <a class="btn btn-outline-primary" routerLink="/jobs">Review workflow pipeline</a>
+  <div class="dashboard-actions">
     <a class="btn btn-outline-primary" routerLink="/normalize-job" data-testid="normalize-link">
       Normalize job
     </a>
+    <a class="btn btn-outline-primary" routerLink="/matching-session">Matching session</a>
+    <a class="btn btn-outline-primary" routerLink="/applications/new">New application</a>
   </div>
 </section>
 
-<section class="dashboard-card dashboard-normalization">
+@if (isAuthenticated()) {
+  <section class="dashboard-grid" aria-label="Overview">
+    <article class="dashboard-card" data-testid="widget-profile">
+      <span>Profile</span>
+      @switch (dashboard.profile().status) {
+        @case ('error') {
+          <p>Unable to load your profile. <button class="btn btn-link p-0" type="button" (click)="reload()">Retry</button></p>
+        }
+        @default {
+          @if (dashboard.profile().data; as profile) {
+            @if (profile.count > 0) {
+              <strong>{{ profile.defaultLabel ?? 'Default profile' }}</strong>
+              <p>
+                {{ profile.count === 1 ? '1 profile' : profile.count + ' profiles' }}
+                @if (formatDate(profile.updatedAt); as updated) { · updated {{ updated }} }
+              </p>
+              <a routerLink="/profiles">Manage profiles</a>
+            } @else {
+              <strong>No profile yet</strong>
+              <p>Upload your documents to build one.</p>
+              <a routerLink="/profile">Create profile</a>
+            }
+          } @else {
+            <p>Loading…</p>
+          }
+        }
+      }
+    </article>
+
+    <article class="dashboard-card" data-testid="widget-applications">
+      <span>Applications</span>
+      @switch (dashboard.applications().status) {
+        @case ('error') {
+          <p>Unable to load applications. <button class="btn btn-link p-0" type="button" (click)="reload()">Retry</button></p>
+        }
+        @default {
+          @if (dashboard.applications().data; as applications) {
+            <strong data-testid="applications-total">{{ applications.total }}</strong>
+            @if (applications.byStatus.length > 0) {
+              <ul class="dashboard-chips">
+                @for (item of applications.byStatus; track item.status) {
+                  <li data-testid="application-status">{{ statusLabels[item.status] }} · {{ item.count }}</li>
+                }
+              </ul>
+              @if (applications.counted < applications.total) {
+                <small>Status counts cover the {{ applications.counted }} most recent entries.</small>
+              }
+            } @else {
+              <p>No applications recorded yet.</p>
+            }
+            <a routerLink="/applications">Open journal</a>
+          } @else {
+            <p>Loading…</p>
+          }
+        }
+      }
+    </article>
+
+    <article class="dashboard-card" data-testid="widget-follow-ups">
+      <span>Follow-ups due</span>
+      @switch (dashboard.applications().status) {
+        @case ('error') {
+          <p>Unavailable while applications fail to load.</p>
+        }
+        @default {
+          @if (dashboard.applications().data; as applications) {
+            <strong data-testid="follow-ups-count">{{ applications.followUpsDueCount }}</strong>
+            @if (applications.followUpsDue.length > 0) {
+              <ul class="dashboard-compact">
+                @for (item of applications.followUpsDue; track item.id) {
+                  <li data-testid="follow-up-item">
+                    <a [routerLink]="['/applications', item.id]">{{ jobLabel(item.title, item.company) }}</a>
+                    <small>{{ formatDate(item.followUpDate) }}</small>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p>Nothing due today.</p>
+            }
+          } @else {
+            <p>Loading…</p>
+          }
+        }
+      }
+    </article>
+
+    <article class="dashboard-card" data-testid="widget-matching">
+      <span>Matching</span>
+      @if (matchingSession(); as session) {
+        <p data-testid="matching-session">
+          @if (session.state === 'open') {
+            {{ session.selectedCount }} selected, not submitted.
+          } @else {
+            Session {{ session.state }}.
+          }
+          <a routerLink="/matching-session">Open</a>
+        </p>
+      }
+      @switch (dashboard.reports().status) {
+        @case ('error') {
+          <p>Unable to load reports. <button class="btn btn-link p-0" type="button" (click)="reload()">Retry</button></p>
+        }
+        @default {
+          @if (dashboard.reports().data; as reports) {
+            <strong>{{ reports.total }}</strong>
+            @if (reports.latest.length > 0) {
+              <ul class="dashboard-compact">
+                @for (report of reports.latest; track report.id) {
+                  <li data-testid="report-item">
+                    <a [routerLink]="['/matching-reports', report.id]">{{ formatDate(report.createdAt) || 'Report' }}</a>
+                    <small>{{ report.status }}</small>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p>No reports yet. Select jobs to run your first match.</p>
+            }
+            <a routerLink="/matching-reports">All reports</a>
+          } @else {
+            <p>Loading…</p>
+          }
+        }
+      }
+    </article>
+
+    <article class="dashboard-card" data-testid="widget-tailoring">
+      <span>Tailored documents</span>
+      @switch (dashboard.tailoring().status) {
+        @case ('error') {
+          <p>Unable to load requests. <button class="btn btn-link p-0" type="button" (click)="reload()">Retry</button></p>
+        }
+        @default {
+          @if (dashboard.tailoring().data; as tailoring) {
+            <strong>{{ tailoring.total }}</strong>
+            @if (tailoring.latest.length > 0) {
+              <ul class="dashboard-compact">
+                @for (request of tailoring.latest; track request.id) {
+                  <li data-testid="tailoring-item">
+                    <a [routerLink]="['/tailored-cvs', request.id]">
+                      {{ request.job_ids.length === 1 ? '1 job' : request.job_ids.length + ' jobs' }}
+                      @if (formatDate(request.created_at); as created) { · {{ created }} }
+                    </a>
+                    <small>{{ request.status }}</small>
+                  </li>
+                }
+              </ul>
+              <a routerLink="/tailored-cvs">History</a>
+            } @else {
+              <p>No tailored CVs or cover letters yet.</p>
+              <a routerLink="/tailoring-session">Start a tailoring session</a>
+            }
+          } @else {
+            <p>Loading…</p>
+          }
+        }
+      }
+    </article>
+
+    <article class="dashboard-card" data-testid="widget-interests">
+      <span>Interests</span>
+      @switch (dashboard.interests().status) {
+        @case ('error') {
+          <p>Unable to load interests. <button class="btn btn-link p-0" type="button" (click)="reload()">Retry</button></p>
+        }
+        @default {
+          @if (dashboard.interests().data !== null) {
+            <strong data-testid="interests-total">{{ dashboard.interests().data }}</strong>
+            <p>jobs saved</p>
+            <a routerLink="/jobs/interests">Open interests</a>
+          } @else {
+            <p>Loading…</p>
+          }
+        }
+      }
+    </article>
+  </section>
+}
+
+<section class="dashboard-list dashboard-normalization">
   <div class="dashboard-list__header">
     <h2>Job normalization</h2>
     <span data-testid="normalization-in-progress">
@@ -25,13 +204,13 @@
     </span>
   </div>
 
-  @if (normalizationJobs().length > 0) {
+  @if (recentNormalizations().length > 0) {
     <ul>
-      @for (submission of normalizationJobs(); track submission.id) {
+      @for (submission of recentNormalizations(); track submission.id) {
         <li data-testid="normalization-item">
           <div>
             <strong>{{ submission.url }}</strong>
-            <p>Submitted {{ submission.submittedAt }}</p>
+            <p>Submitted {{ formatDate(submission.submittedAt) || submission.submittedAt }}</p>
           </div>
           <div>
             <span data-testid="normalization-status">{{ submission.status }}</span>
@@ -42,45 +221,10 @@
         </li>
       }
     </ul>
+    @if (normalizationJobs().length > recentNormalizations().length) {
+      <a routerLink="/normalized-jobs">Browse all normalized jobs</a>
+    }
   } @else {
     <p>No normalization jobs yet. Submit a job posting to get started.</p>
   }
-</section>
-
-<section class="dashboard-grid row g-3">
-  <article class="dashboard-card col-12 col-sm-6 col-xl-3">
-    <span>Authentication</span>
-    <strong>{{ isAuthenticated() ? 'Connected' : 'Pending connection' }}</strong>
-    <p>{{ auth().user?.email }}</p>
-  </article>
-
-  @for (metric of stageMetrics(); track metric.stage) {
-    <article class="dashboard-card col-12 col-sm-6 col-xl-3">
-      <span>{{ metric.label }}</span>
-      <strong>{{ metric.count }}</strong>
-      <p>{{ metric.count === 1 ? 'job ready' : 'jobs ready' }}</p>
-    </article>
-  }
-</section>
-
-<section class="dashboard-list">
-  <div class="dashboard-list__header">
-    <h2>Recent jobs</h2>
-    <span>{{ jobs().length }} tracked</span>
-  </div>
-
-  <ul>
-    @for (job of jobs(); track job.id) {
-      <li>
-        <div>
-          <strong>{{ job.title }}</strong>
-          <p>{{ job.company }} · {{ job.location }}</p>
-        </div>
-        <div>
-          <span>{{ job.stage }}</span>
-          <small>{{ job.updatedAt }}</small>
-        </div>
-      </li>
-    }
-  </ul>
 </section>

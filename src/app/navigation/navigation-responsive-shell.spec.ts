@@ -3,7 +3,6 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../app';
-import { AppStore } from '../core/state/app-store';
 import { AuthStore } from '../core/state/auth-store';
 
 describe('responsive shell', () => {
@@ -27,7 +26,6 @@ describe('responsive shell', () => {
     TestBed.configureTestingModule({ imports: [App], providers: [
       provideRouter([]),
       { provide: AuthStore, useValue: { Refresh: vi.fn(), isAuthenticated: signal(false), authSession: signal({ user: null }) } },
-      { provide: AppStore, useValue: { nextAction: signal('') } },
     ] });
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();

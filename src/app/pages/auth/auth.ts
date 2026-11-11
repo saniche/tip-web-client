@@ -1,6 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { AppStore } from '../../core/state/app-store';
 import { AuthStore } from '../../core/state/auth-store';
 
 @Component({

@@ -26,7 +26,7 @@ export const navigationAreas: readonly NavigationArea[] = [
   { id: 'profile', label: 'My Profile', icon: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M4 21a8 8 0 0 1 16 0', availability: 'available',
     destinations: [{ label: 'Profile', path: '/profile' }] },
   { id: 'jobs', label: 'Jobs', icon: 'M3 7h18v13H3z M8 7V4h8v3 M3 12h18', availability: 'available',
-    destinations: [{ label: 'Normalized jobs', path: '/normalized-jobs' }, { label: 'Normalize job', path: '/normalize-job' }, { label: 'Interests', path: '/jobs/interests' }, { label: 'Workflow pipeline', path: '/jobs' }] },
+    destinations: [{ label: 'Normalized jobs', path: '/normalized-jobs' }, { label: 'Normalize job', path: '/normalize-job' }, { label: 'Interests', path: '/jobs/interests' }] },
   { id: 'matching', label: 'Job Matching', icon: 'M4 5h16 M4 12h10 M4 19h16 M17 10l2 2 3-4', availability: 'available',
     destinations: [{ label: 'Matching session', path: '/matching-session' }, { label: 'Matching reports', path: '/matching-reports' }] },
   { id: 'applications', label: 'Applications', icon: 'M5 3h14v18H5z M8 8h8 M8 12h8 M8 16h6', availability: 'available',

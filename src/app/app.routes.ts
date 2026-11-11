@@ -2,7 +2,6 @@ import { Routes } from '@angular/router';
 import { Auth } from './pages/auth/auth';
 import { Register } from './pages/auth/register/register';
 import { Dashboard } from './pages/dashboard/dashboard';
-import { Jobs } from './pages/jobs/jobs';
 import { ProfileComponent } from './pages/profile/profile.component';
 import { authGuard } from './core/guards/auth.guard';
 import { AreaId, NavigationDestination } from './navigation/navigation.model';
@@ -30,13 +29,6 @@ export const routes: Routes = [
   {
     path: 'auth/register',
     component: Register,
-  },
-  {
-    path: 'jobs',
-    title: 'Workflow pipeline',
-    data: context('jobs', 'Workflow pipeline'),
-    canActivate: [authGuard],
-    component: Jobs,
   },
   {
     path: 'jobs/interests',
