@@ -35,7 +35,9 @@ export class Dashboard {
   protected readonly normalizationJobs = this.normalizationStore.submissions;
   protected readonly normalizationInProgress = this.normalizationStore.inProgressCount;
   protected readonly recentNormalizations = computed(() =>
-    this.normalizationJobs().slice(0, RECENT_NORMALIZATIONS),
+    [...this.normalizationJobs()]
+      .sort((a, b) => Date.parse(b.submittedAt) - Date.parse(a.submittedAt))
+      .slice(0, RECENT_NORMALIZATIONS),
   );
 
   protected readonly matchingSession = computed(() => {
