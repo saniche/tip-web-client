@@ -24,7 +24,8 @@ describe('primary navigation', () => {
     expect(element.querySelectorAll('svg[aria-hidden="true"]').length).toBe(6);
     const links = Array.from(element.querySelectorAll<HTMLAnchorElement>('a')).map((link) => link.getAttribute('href'));
     expect(new Set(links).size).toBe(links.length);
-    expect(links).toContain('/jobs');
+    expect(links).toContain('/jobs/interests');
+    expect(links).not.toContain('/jobs');
     expect(links).toContain('/applications');
     expect(links).toContain('/tailoring-session');
     expect(links).toContain('/tailored-cvs');

@@ -101,6 +101,7 @@ describe('Tailoring session workspace', () => {
   });
 
   it('discards a draft without starting generation and clears the source URL', async () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate');
     await harness.navigateByUrl('/tailoring-session?jobId=job-1', TailoredCvSetup);
     harness.detectChanges();
     store.language.set('Spanish');
@@ -109,7 +110,8 @@ describe('Tailoring session workspace', () => {
     expect(button('confirm-tailoring').textContent).toContain('Start tailoring');
     expect(createTailoring).not.toHaveBeenCalled();
     button('discard-tailoring-session').click();
-    await harness.fixture.whenStable();
+    expect(navigate).toHaveBeenCalledWith(['/tailoring-session'], { replaceUrl: true });
+    await expect(navigate.mock.results[0].value).resolves.toBe(true);
     harness.detectChanges();
     expect(TestBed.inject(Router).url).toBe('/tailoring-session');
     expect(createTailoring).not.toHaveBeenCalled();
@@ -126,7 +128,7 @@ describe('Tailoring session workspace', () => {
     expect(store.sessionSource()).toBe('report');
     expect(harness.routeNativeElement?.querySelector('[data-testid="replace-tailoring-session"]')).toBeNull();
     expect(createTailoring).not.toHaveBeenCalled();
-  }, 10_000);
+  });
 
   it('asks before replacing an incompatible draft and pins report jobs and profile', async () => {
     await harness.navigateByUrl('/tailoring-session?jobId=job-1', TailoredCvSetup);
@@ -169,6 +171,7 @@ describe('Tailoring session workspace', () => {
   });
 
   it('shows the running request when returning after it is accepted', async () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate');
     await harness.navigateByUrl('/tailoring-session?jobId=job-1', TailoredCvSetup);
     harness.detectChanges();
     button('review-tailoring').click();
@@ -177,14 +180,17 @@ describe('Tailoring session workspace', () => {
     response.next({ id: 'process-1', result_id: 'request-1', status: 'pending' });
     response.complete();
     harness.detectChanges();
-    await harness.fixture.whenStable();
+    expect(navigate).toHaveBeenCalledWith(['/tailored-cvs', 'request-1']);
+    await expect(navigate.mock.results[0].value).resolves.toBe(true);
+    expect(TestBed.inject(Router).url).toBe('/tailored-cvs/request-1');
     await harness.navigateByUrl('/tailoring-session', TailoredCvSetup);
     harness.detectChanges();
     expect(store.sessionSource()).toBeNull();
     expect(harness.routeNativeElement?.textContent).toContain('A tailoring request is running');
-  }, 10_000);
+  });
 
   it('queues a report while running and opens it after the matching request completes', async () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate');
     await harness.navigateByUrl('/tailoring-session?jobId=job-1', TailoredCvSetup);
     harness.detectChanges();
     button('review-tailoring').click();
@@ -192,7 +198,10 @@ describe('Tailoring session workspace', () => {
     button('confirm-tailoring').click();
     response.next({ id: 'process-1', result_id: 'request-1', status: 'pending' });
     response.complete();
-    await harness.fixture.whenStable();
+    harness.detectChanges();
+    expect(navigate).toHaveBeenCalledWith(['/tailored-cvs', 'request-1']);
+    await expect(navigate.mock.results[0].value).resolves.toBe(true);
+    expect(TestBed.inject(Router).url).toBe('/tailored-cvs/request-1');
     await harness.navigateByUrl('/tailoring-session?reportId=report-2', TailoredCvSetup);
     harness.detectChanges();
     const session = store.sessionCoordinator.session;
@@ -218,5 +227,5 @@ describe('Tailoring session workspace', () => {
     expect(store.selectedJobIds()).toEqual([]);
     expect(session.reports().map((report) => report.id)).toEqual(['request-1']);
     expect(createTailoring).toHaveBeenCalledTimes(1);
-  }, 10_000);
+  });
 });

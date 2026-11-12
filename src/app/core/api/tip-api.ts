@@ -2,7 +2,6 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
-import { JobWorkflowItem } from '../models/workflow';
 import {
   NormalizeJobRequest,
   NormalizationJob,
@@ -64,10 +63,6 @@ export class TipApi {
 
   register(payload: RegisterUserRequest): Observable<RegisterTokenResponse> {
     return this.http.post<RegisterTokenResponse>(`${this.baseUrl}/auth/register`, payload);
-  }
-
-  listJobs(): Observable<JobWorkflowItem[]> {
-    return this.http.get<JobWorkflowItem[]>(`${this.baseUrl}/jobs`);
   }
 
   listNormalizedJobs(query: Partial<NormalizedJobQuery> = {}): Observable<NormalizedJobsPage> {

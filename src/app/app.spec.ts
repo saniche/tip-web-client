@@ -4,7 +4,6 @@ import { signal } from '@angular/core';
 import { vi } from 'vitest';
 import { App } from './app';
 import { routes } from './app.routes';
-import { AppStore } from './core/state/app-store';
 import { AuthStore } from './core/state/auth-store';
 
 describe('App', () => {
@@ -41,7 +40,6 @@ describe('App', () => {
             isAuthenticated: signal(true),
             authSession: signal({ user: { email: 'user@example.test' } }),
           } },
-          { provide: AppStore, useValue: { nextAction: signal('') } },
         ],
       }).compileComponents();
       const router = TestBed.inject(Router);
@@ -71,12 +69,12 @@ describe('App', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.app-shell__brand')?.textContent).toContain('Talent Intelligent Platform');
     expect(compiled.textContent).toContain('Dashboard');
-    expect(compiled.textContent).toContain('Auth');
+    expect(compiled.textContent).toContain('Login');
     expect(compiled.textContent).toContain('Jobs');
     expect(compiled.textContent).toContain('Job Matching');
     expect(compiled.textContent).toContain('Applications');
     expect(compiled.querySelectorAll('nav[aria-label="Primary"]')).toHaveLength(1);
-    expect(compiled.querySelector('[aria-label="Workflow status"]')).toBeTruthy();
+    expect(compiled.querySelector('[aria-label="Workflow status"]')).toBeNull();
     expect(compiled.querySelector('.app-shell__session')).toBeTruthy();
   });
 });

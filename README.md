@@ -19,7 +19,8 @@ The client integrates with the Talent Intelligence Platform API and provides the
 - Authentication is kept in session storage. The client ends its session after its configured
   23-hour lifetime or an authenticated API response of 401; the server remains authoritative
   about token validity.
-- Saved normalization, matching, and tailoring sessions and tailoring process identifiers use
+- Saved normalization, matching, and tailoring sessions, tailoring process identifiers, and
+  dashboard preferences and checklist dismissal use
   local storage scoped by the signed-in email address. A successful
   read or write renews its seven-day expiry. Expired entries are removed when accessed, not
   while the application is closed.
@@ -88,6 +89,14 @@ The client integrates with the Talent Intelligence Platform API and provides the
 - View related normalized job details and compare the report's profile version with the current profile where available.
 - Delete a matching report through the API.
 
+### CV and cover-letter tailoring
+
+- Start a draft from normalized jobs or a matching report, select one to ten jobs and a profile,
+  and choose output language and per-job or general CV and optional cover-letter modes.
+- Review before submitting, track processing, inspect request history and retry failed requests.
+- Preview and download completed documents. Drafts and queued report sessions are not submitted
+  automatically, and generating documents does not change the saved profile.
+
 ### Application journal
 
 - Create an application from a normalized job.
@@ -102,17 +111,20 @@ The client integrates with the Talent Intelligence Platform API and provides the
 - Review application status history.
 - Delete an application entry.
 
-### Dashboard and workflow views
+### Dashboard
 
-- Dashboard overview of authentication state, normalization activity, and the current job workflow view.
-- Normalization submission status and links to completed normalized jobs.
-- A separate Jobs pipeline view for moving workflow items through its displayed stages.
-
-> The Jobs pipeline view and dashboard stage metrics are a lightweight workflow view. They should not be confused with the API-backed Application Journal, which is the source for tracked applications.
+- An operational overview of profiles, applications and follow-ups, matching reports, tailoring
+  requests, interests, and normalization activity, with a suggested next step.
+- Show, hide, and reorder sections per signed-in user. Settings and checklist dismissal are local
+  to the browser and expire after seven days without access; they do not sync across devices.
+- A dismissible setup checklist uses available profile, normalized-job, matching-report,
+  tailoring-request, and application data. Normalized jobs may have been created by other users;
+  existing reports and requests count even when unsuccessful. Unavailable data is not treated as
+  completed.
 
 ### Feature navigation
 
-The primary navigation groups existing pages under Dashboard, My Profile, Jobs, Job Matching, and Applications. Jobs contains the lightweight Workflow pipeline as well as normalized jobs and interests. Settings is hidden because no settings destination exists.
+The primary navigation groups existing pages under Dashboard, My Profile, Jobs, Job Matching, Tailoring, and Applications. Jobs includes normalized jobs and interests. Settings is hidden because no settings destination exists.
 
 Tailoring provides navigation to the existing session and history pages, including request details, document previews, and downloads. These pages require authentication; their service-backed workflows still need verification with authenticated fixtures.
 
@@ -127,11 +139,12 @@ still require explicit selection, with one to ten jobs per submission.
 
 ## Current client scope and known gaps
 
-The following capabilities are **not currently exposed as complete client workflows** in this repository:
+Current limitations include:
 
-- **Tailoring service availability:** the existing CV and cover-letter client workflows have not been verified against the target service in this navigation change.
+- **Tailoring service availability:** client workflows exist, but their behavior depends on the configured service; end-to-end availability has not been verified here.
 - **Direct job application submission:** the normalized job detail view currently shows this action as unavailable. Applications are recorded and managed through the Application Journal; the client does not automatically submit applications to employers.
-- **Dashboard analytics:** the dashboard is an operational overview, not yet a comprehensive analytics dashboard with aggregated counts and charts across all platform modules.
+- **Dashboard analytics:** the dashboard provides operational counts, not comprehensive analytics or charts across all platform modules. Application status and follow-up details cover at most the first 100 entries.
+- **Cross-device dashboard settings:** preferences and checklist dismissal are browser-local.
 
 These items are client-side scope observations, not statements that the corresponding backend capabilities are unavailable.
 
@@ -139,11 +152,14 @@ These items are client-side scope observations, not statements that the correspo
 
 | Route                   | Purpose                                      |
 | ----------------------- | -------------------------------------------- |
-| `/dashboard`            | Dashboard and workflow overview              |
+| `/`                     | Redirect to dashboard                        |
+| `/dashboard`            | Dashboard overview                           |
 | `/auth`                 | Login                                        |
 | `/auth/register`        | Account registration                         |
 | `/profile`              | Candidate profile builder and editor         |
-| `/jobs`                 | Workflow pipeline view                       |
+| `/profiles`             | Profile version list                         |
+| `/profiles/:id`         | Profile version details                      |
+| `/profiles/:id/edit`    | Edit profile version                         |
 | `/normalize-job`        | Submit a job for normalization               |
 | `/normalized-jobs`      | Browse normalized jobs                       |
 | `/normalized-jobs/:id`  | Normalized job details and available actions |
@@ -151,6 +167,12 @@ These items are client-side scope observations, not statements that the correspo
 | `/matching-session`     | Review and submit a matching session         |
 | `/matching-reports`     | Matching report history                      |
 | `/matching-reports/:id` | Matching report details                      |
+| `/tailoring-session`    | Review a tailoring session                   |
+| `/tailored-cvs/new/job/:id` | Start tailoring from a job               |
+| `/tailored-cvs/new/report/:id` | Start tailoring from a report        |
+| `/tailored-cvs`         | Tailoring history                            |
+| `/tailored-cvs/:id`     | Tailoring request details                    |
+| `/tailored-cvs/:id/documents/:documentId` | Preview a tailored document |
 | `/applications`         | Application journal                          |
 | `/applications/new`     | Create an application entry                  |
 | `/applications/:id`     | View and edit an application entry           |

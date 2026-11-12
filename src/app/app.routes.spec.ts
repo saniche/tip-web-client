@@ -16,7 +16,6 @@ const protectedUrls = [
   '/profiles',
   '/profiles/profile-1',
   '/profiles/profile-1/edit',
-  '/jobs',
   '/jobs/interests',
   '/normalize-job',
   '/normalized-jobs/job-1',

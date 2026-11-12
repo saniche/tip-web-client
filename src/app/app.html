@@ -19,16 +19,6 @@
     </div>
   </header>
 
-  <section class="app-shell__status">
-    <div
-      class="container-fluid d-flex flex-wrap gap-2 align-items-center"
-      aria-label="Workflow status"
-    >
-      <strong>Next action:</strong>
-      <span>{{ nextAction() }}</span>
-    </div>
-  </section>
-
   <main class="app-shell__main container-fluid">
     <ngx-sonner-toaster position="top-right" richColors />
     <router-outlet></router-outlet>
