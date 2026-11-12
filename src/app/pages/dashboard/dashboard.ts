@@ -35,7 +35,9 @@ export class Dashboard {
   protected readonly normalizationJobs = this.normalizationStore.submissions;
   protected readonly normalizationInProgress = this.normalizationStore.inProgressCount;
   protected readonly recentNormalizations = computed(() =>
-    this.normalizationJobs().slice(0, RECENT_NORMALIZATIONS),
+    [...this.normalizationJobs()]
+      .sort((a, b) => Date.parse(b.submittedAt) - Date.parse(a.submittedAt))
+      .slice(0, RECENT_NORMALIZATIONS),
   );
 
   protected readonly matchingSession = computed(() => {
@@ -46,9 +48,13 @@ export class Dashboard {
   protected readonly nextStep = computed(() =>
     computeNextStep({
       isAuthenticated: this.isAuthenticated(),
-      profileCount: this.dashboard.profile().data?.count ?? null,
+      profileCount: this.dashboard.profile().status === 'loaded'
+        ? this.dashboard.profile().data?.count ?? null
+        : null,
       matchingSession: this.matchingSession(),
-      followUpsDueCount: this.dashboard.applications().data?.followUpsDueCount ?? null,
+      followUpsDueCount: this.dashboard.applications().status === 'loaded'
+        ? this.dashboard.applications().data?.followUpsDueCount ?? null
+        : null,
     }),
   );
 
@@ -96,7 +102,10 @@ export class Dashboard {
     if (!value) {
       return '';
     }
-    const date = new Date(value);
+    const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    const date = dateOnly
+      ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+      : new Date(value);
     return Number.isNaN(date.getTime())
       ? ''
       : new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(date);
