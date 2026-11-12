@@ -46,9 +46,13 @@ export class Dashboard {
   protected readonly nextStep = computed(() =>
     computeNextStep({
       isAuthenticated: this.isAuthenticated(),
-      profileCount: this.dashboard.profile().data?.count ?? null,
+      profileCount: this.dashboard.profile().status === 'loaded'
+        ? this.dashboard.profile().data?.count ?? null
+        : null,
       matchingSession: this.matchingSession(),
-      followUpsDueCount: this.dashboard.applications().data?.followUpsDueCount ?? null,
+      followUpsDueCount: this.dashboard.applications().status === 'loaded'
+        ? this.dashboard.applications().data?.followUpsDueCount ?? null
+        : null,
     }),
   );
 
