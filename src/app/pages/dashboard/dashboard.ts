@@ -96,7 +96,10 @@ export class Dashboard {
     if (!value) {
       return '';
     }
-    const date = new Date(value);
+    const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    const date = dateOnly
+      ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+      : new Date(value);
     return Number.isNaN(date.getTime())
       ? ''
       : new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(date);
