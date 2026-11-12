@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NormalizationSubmission } from '../../core/models/normalization';
 import { AuthStore } from '../../core/state/auth-store';
 import { DashboardStore, WidgetState } from '../../core/state/dashboard-store';
@@ -51,6 +51,7 @@ describe('Dashboard', () => {
     reports: ReturnType<typeof signal<WidgetState<ReportsSummary>>>;
     tailoring: ReturnType<typeof signal<WidgetState<TailoringSummary>>>;
     interests: ReturnType<typeof signal<WidgetState<number>>>;
+    normalizedJobs: ReturnType<typeof signal<WidgetState<number>>>;
     load: ReturnType<typeof vi.fn>;
     reset: ReturnType<typeof vi.fn>;
   };
@@ -60,6 +61,12 @@ describe('Dashboard', () => {
     (fixture.nativeElement.querySelector(`[data-testid="${testId}"]`)?.textContent ?? '').trim();
 
   beforeEach(async () => {
+    const records = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => records.get(key) ?? null,
+      setItem: (key: string, value: string) => records.set(key, value),
+      removeItem: (key: string) => records.delete(key),
+    });
     normalizationStoreMock = {
       submissions: signal<NormalizationSubmission[]>([]),
       inProgressCount: signal(0),
@@ -73,6 +80,7 @@ describe('Dashboard', () => {
       reports: signal(idle<ReportsSummary>()),
       tailoring: signal(idle<TailoringSummary>()),
       interests: signal(idle<number>()),
+      normalizedJobs: signal(idle<number>()),
       load: vi.fn(),
       reset: vi.fn(),
     };
@@ -93,6 +101,11 @@ describe('Dashboard', () => {
     component = fixture.componentInstance;
     // Nothing here is asynchronous, so render synchronously instead of awaiting whenStable().
     fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('should create', () => {
@@ -176,11 +189,14 @@ describe('Dashboard', () => {
 
     it('reloads when the signed-in user changes', () => {
       dashboardMock.load.mockClear();
+      dashboardMock.reset.mockClear();
 
       authSession.set({ user: { email: 'other@example.test' } });
       fixture.detectChanges();
 
+      expect(dashboardMock.reset).toHaveBeenCalledTimes(1);
       expect(dashboardMock.load).toHaveBeenCalledTimes(1);
+      expect(dashboardMock.reset.mock.invocationCallOrder[0]).toBeLessThan(dashboardMock.load.mock.invocationCallOrder[0]);
     });
 
     it('shows loading placeholders before data arrives', () => {
@@ -293,6 +309,81 @@ describe('Dashboard', () => {
       dashboardMock.load.mockClear();
       fixture.nativeElement.querySelector('[data-testid="widget-interests"] button').click();
       expect(dashboardMock.load).toHaveBeenCalledTimes(1);
+    });
+
+    it('reorders and hides widgets, restores them on reload, and isolates users', () => {
+      const checkbox = fixture.nativeElement.querySelector('.dashboard-customize input') as HTMLInputElement;
+      checkbox.click();
+      fixture.nativeElement.querySelector('[aria-label="Move Profile up"]').click();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('[data-testid="widget-hero"]')).toBeNull();
+      let rendered = fixture.nativeElement.querySelector('.dashboard-grid').querySelectorAll('[data-testid^="widget-"]');
+      expect(rendered[0].getAttribute('data-testid')).toBe('widget-profile');
+
+      fixture.destroy();
+      fixture = TestBed.createComponent(Dashboard);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="widget-hero"]')).toBeNull();
+      rendered = fixture.nativeElement.querySelector('.dashboard-grid').querySelectorAll('[data-testid^="widget-"]');
+      expect(rendered[0].getAttribute('data-testid')).toBe('widget-profile');
+
+      authSession.set({ user: { email: 'other@example.test' } });
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="widget-hero"]')).not.toBeNull();
+      authSession.set({ user: { email: 'user@example.test' } });
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="widget-hero"]')).toBeNull();
+      const heroCheckbox = Array.from(fixture.nativeElement.querySelectorAll('.dashboard-customize label'))
+        .find((label) => (label as HTMLElement).textContent?.includes('Next step and actions')) as HTMLElement;
+      (heroCheckbox.querySelector('input') as HTMLInputElement).click();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="widget-hero"]')).not.toBeNull();
+      isAuthenticated.set(false);
+      authSession.set({ user: null });
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="widget-hero"]')).not.toBeNull();
+    });
+
+    it('renders checklist data, keeps unknown values visible and hides when all are complete', () => {
+      dashboardMock.profile.set(loaded({ count: 1, defaultLabel: null, updatedAt: null }));
+      dashboardMock.normalizedJobs.set(loaded(1));
+      dashboardMock.reports.set(loaded({ total: 1, latest: [] }));
+      dashboardMock.tailoring.set(loaded({ total: 1, latest: [] }));
+      dashboardMock.applications.set(loaded({ total: 0, counted: 0, byStatus: [], followUpsDue: [], followUpsDueCount: 0 }));
+      fixture.detectChanges();
+      expect(text('checklist-profile')).toContain('Done');
+      expect(text('checklist-application')).toContain('To do');
+
+      dashboardMock.applications.set({ status: 'error', data: null });
+      fixture.detectChanges();
+      expect(text('checklist-application')).toContain('Status unavailable');
+      expect(text('setup-checklist')).toContain('Retry');
+
+      dashboardMock.applications.set(loaded({ total: 1, counted: 0, byStatus: [], followUpsDue: [], followUpsDueCount: 0 }));
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="setup-checklist"]')).toBeNull();
+    });
+
+    it('persists checklist dismissal only for the current account', () => {
+      fixture.nativeElement.querySelector('[data-testid="setup-checklist"] button').click();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="setup-checklist"]')).toBeNull();
+      fixture.destroy();
+      fixture = TestBed.createComponent(Dashboard);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="setup-checklist"]')).toBeNull();
+      authSession.set({ user: { email: 'other@example.test' } });
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="setup-checklist"]')).not.toBeNull();
+    });
+
+    it('visibly reports an unsuccessful preference save', () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      vi.spyOn(localStorage, 'setItem').mockImplementation(() => { throw new Error('quota'); });
+      fixture.nativeElement.querySelector('.dashboard-customize input').click();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[role="alert"]').textContent).toContain('could not be saved');
     });
   });
 });

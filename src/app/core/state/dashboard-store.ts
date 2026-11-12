@@ -36,6 +36,7 @@ export class DashboardStore {
   readonly reports = signal<WidgetState<ReportsSummary>>(idle());
   readonly tailoring = signal<WidgetState<TailoringSummary>>(idle());
   readonly interests = signal<WidgetState<number>>(idle());
+  readonly normalizedJobs = signal<WidgetState<number>>(idle());
 
   /** Loads every widget independently; one failing request never blocks the others. */
   load(): void {
@@ -60,6 +61,11 @@ export class DashboardStore {
       this.api.listInterests({ page: 1, limit: 1 }).pipe(map((page) => page.total)),
       generation,
     );
+    this.run(
+      this.normalizedJobs,
+      this.api.listNormalizedJobs({ page: 1, limit: 1 }).pipe(map((page) => page.total)),
+      generation,
+    );
   }
 
   /** Drops all data and ignores any request still in flight (logout or user change). */
@@ -70,6 +76,7 @@ export class DashboardStore {
     this.reports.set(idle());
     this.tailoring.set(idle());
     this.interests.set(idle());
+    this.normalizedJobs.set(idle());
   }
 
   private run<T>(target: WritableSignal<WidgetState<T>>, source: Observable<T>, generation: number): void {

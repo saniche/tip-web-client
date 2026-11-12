@@ -11,6 +11,7 @@ describe('DashboardStore', () => {
     listMatchingReports: ReturnType<typeof vi.fn>;
     listTailoringRequests: ReturnType<typeof vi.fn>;
     listInterests: ReturnType<typeof vi.fn>;
+    listNormalizedJobs: ReturnType<typeof vi.fn>;
   };
   let store: DashboardStore;
 
@@ -21,6 +22,7 @@ describe('DashboardStore', () => {
       listMatchingReports: vi.fn(() => of([])),
       listTailoringRequests: vi.fn(() => of([])),
       listInterests: vi.fn(() => of({ items: [], page: 1, limit: 1, total: 7 })),
+      listNormalizedJobs: vi.fn(() => of({ items: [], page: 1, limit: 1, total: 2 })),
     };
     TestBed.configureTestingModule({ providers: [{ provide: TipApi, useValue: api }] });
     store = TestBed.inject(DashboardStore);
@@ -39,6 +41,7 @@ describe('DashboardStore', () => {
     expect(store.reports().data).toEqual({ total: 0, latest: [] });
     expect(store.tailoring().data).toEqual({ total: 0, latest: [] });
     expect(store.applications().data?.total).toBe(0);
+    expect(store.normalizedJobs().data).toBe(2);
   });
 
   it('reads the application journal in one large page', () => {
@@ -46,6 +49,7 @@ describe('DashboardStore', () => {
 
     expect(api.listApplications).toHaveBeenCalledWith({ page: 1, limit: DASHBOARD_APPLICATIONS_PAGE_SIZE });
     expect(api.listInterests).toHaveBeenCalledWith({ page: 1, limit: 1 });
+    expect(api.listNormalizedJobs).toHaveBeenCalledWith({ page: 1, limit: 1 });
   });
 
   it('keeps other widgets loaded when one request fails', () => {
@@ -57,6 +61,23 @@ describe('DashboardStore', () => {
     expect(store.profile().status).toBe('loaded');
     expect(store.applications().status).toBe('loaded');
     expect(store.interests().status).toBe('loaded');
+  });
+
+  it('marks a failed normalized-jobs request as unknown without blocking other data', () => {
+    api.listNormalizedJobs.mockReturnValue(throwError(() => new Error('unavailable')));
+    store.load();
+    expect(store.normalizedJobs()).toEqual({ status: 'error', data: null });
+    expect(store.profile().status).toBe('loaded');
+  });
+
+  it('ignores normalized-job results from a prior account after reset', () => {
+    const oldRequest = new Subject<{ total: number }>();
+    api.listNormalizedJobs.mockReturnValueOnce(oldRequest);
+    store.load();
+    store.reset();
+    store.load();
+    oldRequest.next({ total: 99 });
+    expect(store.normalizedJobs()).toEqual({ status: 'loaded', data: 2 });
   });
 
   it('keeps the last loaded data when a reload fails', () => {
@@ -108,5 +129,6 @@ describe('DashboardStore', () => {
 
     expect(store.interests()).toEqual({ status: 'idle', data: null });
     expect(store.applications()).toEqual({ status: 'idle', data: null });
+    expect(store.normalizedJobs()).toEqual({ status: 'idle', data: null });
   });
 });

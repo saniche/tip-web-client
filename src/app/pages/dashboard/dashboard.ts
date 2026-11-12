@@ -1,8 +1,11 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, effect, inject, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { APPLICATION_STATUS_LABELS } from '../../core/models/application-journal';
 import { AuthStore } from '../../core/state/auth-store';
 import { DashboardStore } from '../../core/state/dashboard-store';
+import { dashboardChecklist } from '../../core/state/dashboard-checklist';
+import { DASHBOARD_WIDGETS, DashboardPreferencesStore, DashboardWidgetId } from '../../core/state/dashboard-preferences';
 import { computeNextStep } from '../../core/state/dashboard-summary';
 import { MatchingStore } from '../../core/state/matching-store';
 import { NormalizationStore } from '../../core/state/normalization-store';
@@ -10,7 +13,8 @@ import { NormalizationStore } from '../../core/state/normalization-store';
 const RECENT_NORMALIZATIONS = 5;
 
 @Component({
-  imports: [RouterLink],
+  imports: [NgTemplateOutlet, RouterLink],
+  providers: [DashboardPreferencesStore],
   selector: 'app-dashboard',
   styleUrl: './dashboard.scss',
   templateUrl: './dashboard.html',
@@ -20,6 +24,10 @@ export class Dashboard {
   private readonly normalizationStore = inject(NormalizationStore);
   private readonly matchingStore = inject(MatchingStore);
   protected readonly dashboard = inject(DashboardStore);
+  protected readonly preferences = inject(DashboardPreferencesStore);
+  protected readonly widgetLabels = new Map<DashboardWidgetId, string>(
+    DASHBOARD_WIDGETS.map(({ id, label }) => [id, label]),
+  );
 
   protected readonly isAuthenticated = this.authStore.isAuthenticated;
   protected readonly statusLabels = APPLICATION_STATUS_LABELS;
@@ -44,14 +52,40 @@ export class Dashboard {
     }),
   );
 
+  protected readonly checklist = computed(() => dashboardChecklist({
+    profile: this.dashboard.profile(),
+    normalizedJobs: this.dashboard.normalizedJobs(),
+    reports: this.dashboard.reports(),
+    tailoring: this.dashboard.tailoring(),
+    applications: this.dashboard.applications(),
+  }));
+  protected readonly showChecklist = computed(() =>
+    this.isAuthenticated() &&
+    !this.preferences.preferences().checklistDismissed &&
+    this.checklist().some((step) => step.status !== 'complete'),
+  );
+  protected readonly checklistHasError = computed(() =>
+    [this.dashboard.profile(), this.dashboard.normalizedJobs(), this.dashboard.reports(),
+      this.dashboard.tailoring(), this.dashboard.applications()].some((state) => state.status === 'error'),
+  );
+
   constructor() {
     effect(() => {
       // Re-run when the signed-in user changes, not only on sign-in/out.
-      this.authStore.authSession().user?.email;
+      const owner = this.authStore.authSession().user?.email ?? null;
       const authenticated = this.isAuthenticated();
 
-      untracked(() => (authenticated ? this.dashboard.load() : this.dashboard.reset()));
+      untracked(() => {
+        this.preferences.activate(authenticated ? owner : null);
+        this.dashboard.reset();
+        if (authenticated) this.dashboard.load();
+      });
     });
+  }
+
+  protected setWidgetVisible(id: DashboardWidgetId, event: Event): void {
+    const target = event.target;
+    if (target instanceof HTMLInputElement) this.preferences.setVisible(id, target.checked);
   }
 
   protected reload(): void {

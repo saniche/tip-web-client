@@ -13,6 +13,41 @@
   box-shadow: 0 1rem 2.5rem rgba(15, 39, 64, 0.06);
 }
 
+.dashboard-customize {
+  padding: 1rem;
+  border: 1px solid var(--tip-border);
+  border-radius: 1rem;
+  background: var(--tip-surface);
+}
+
+.dashboard-customize summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.dashboard-customize__list {
+  padding-left: 1.5rem;
+  margin-bottom: 0;
+}
+
+.dashboard-customize__list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+}
+
+.dashboard-customize__list button + button {
+  margin-left: 0.5rem;
+}
+
+.dashboard-error {
+  color: var(--bs-danger-text-emphasis);
+  margin: 0;
+}
+
 .dashboard-hero {
   margin: 0;
 }
@@ -60,6 +95,10 @@ p {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
   gap: 1rem;
+}
+
+.dashboard-wide {
+  grid-column: 1 / -1;
 }
 
 .dashboard-chips {

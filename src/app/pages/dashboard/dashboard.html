@@ -1,4 +1,68 @@
-<section class="dashboard-hero">
+@if (isAuthenticated()) {
+  <details class="dashboard-customize">
+    <summary>Customize dashboard</summary>
+    <p>Show, hide, or reorder dashboard sections.</p>
+    <ol class="dashboard-customize__list">
+      @for (widget of preferences.preferences().widgets; track widget.id; let first = $first; let last = $last) {
+        <li>
+          <label>
+            <input type="checkbox" [checked]="widget.visible" (change)="setWidgetVisible(widget.id, $event)">
+            {{ widgetLabels.get(widget.id) }}
+          </label>
+          <div>
+            <button type="button" class="btn btn-sm btn-outline-secondary" [disabled]="first"
+              [attr.aria-label]="'Move ' + widgetLabels.get(widget.id) + ' up'" (click)="preferences.move(widget.id, -1)">Up</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" [disabled]="last"
+              [attr.aria-label]="'Move ' + widgetLabels.get(widget.id) + ' down'" (click)="preferences.move(widget.id, 1)">Down</button>
+          </div>
+        </li>
+      }
+    </ol>
+  </details>
+  @if (preferences.error(); as error) {
+    <p class="dashboard-error" role="alert">{{ error }}</p>
+  }
+  @if (showChecklist()) {
+    <section class="dashboard-list" aria-labelledby="checklist-title" data-testid="setup-checklist">
+      <div class="dashboard-list__header">
+        <h2 id="checklist-title">Get started</h2>
+        <button type="button" class="btn btn-link" (click)="preferences.dismissChecklist()">Dismiss checklist</button>
+      </div>
+      <ul>
+        @for (step of checklist(); track step.id) {
+          <li [attr.data-testid]="'checklist-' + step.id">
+            <a [routerLink]="step.link">{{ step.label }}</a>
+            <span>{{ step.status === 'complete' ? 'Done' : step.status === 'incomplete' ? 'To do' : 'Status unavailable' }}</span>
+          </li>
+        }
+      </ul>
+      <small>Normalized jobs may have been created by other users. Matching and tailoring steps count existing reports and requests, including unsuccessful ones.</small>
+      @if (checklistHasError()) {
+        <p>Some checklist data could not be loaded. <button class="btn btn-link p-0" type="button" (click)="reload()">Retry</button></p>
+      }
+    </section>
+  }
+}
+
+<section class="dashboard-grid" aria-label="Overview">
+  @for (widget of preferences.preferences().widgets; track widget.id) {
+    @if (widget.visible && (isAuthenticated() || widget.id === 'hero' || widget.id === 'normalization')) {
+      @switch (widget.id) {
+        @case ('hero') { <ng-container [ngTemplateOutlet]="hero" /> }
+        @case ('profile') { <ng-container [ngTemplateOutlet]="profile" /> }
+        @case ('applications') { <ng-container [ngTemplateOutlet]="applications" /> }
+        @case ('follow-ups') { <ng-container [ngTemplateOutlet]="followUps" /> }
+        @case ('matching') { <ng-container [ngTemplateOutlet]="matching" /> }
+        @case ('tailoring') { <ng-container [ngTemplateOutlet]="tailoring" /> }
+        @case ('interests') { <ng-container [ngTemplateOutlet]="interests" /> }
+        @case ('normalization') { <ng-container [ngTemplateOutlet]="normalization" /> }
+      }
+    }
+  }
+</section>
+
+<ng-template #hero>
+<section class="dashboard-hero dashboard-wide" data-testid="widget-hero">
   <div class="dashboard-next" data-testid="next-step">
     <div>
       <p class="dashboard-kicker">Next step</p>
@@ -17,9 +81,9 @@
     <a class="btn btn-outline-primary" routerLink="/applications/new">New application</a>
   </div>
 </section>
+</ng-template>
 
-@if (isAuthenticated()) {
-  <section class="dashboard-grid" aria-label="Overview">
+<ng-template #profile>
     <article class="dashboard-card" data-testid="widget-profile">
       <span>Profile</span>
       @switch (dashboard.profile().status) {
@@ -46,7 +110,9 @@
         }
       }
     </article>
+</ng-template>
 
+<ng-template #applications>
     <article class="dashboard-card" data-testid="widget-applications">
       <span>Applications</span>
       @switch (dashboard.applications().status) {
@@ -75,7 +141,9 @@
         }
       }
     </article>
+</ng-template>
 
+<ng-template #followUps>
     <article class="dashboard-card" data-testid="widget-follow-ups">
       <span>Follow-ups due</span>
       @switch (dashboard.applications().status) {
@@ -103,7 +171,9 @@
         }
       }
     </article>
+</ng-template>
 
+<ng-template #matching>
     <article class="dashboard-card" data-testid="widget-matching">
       <span>Matching</span>
       @if (matchingSession(); as session) {
@@ -142,7 +212,9 @@
         }
       }
     </article>
+</ng-template>
 
+<ng-template #tailoring>
     <article class="dashboard-card" data-testid="widget-tailoring">
       <span>Tailored documents</span>
       @switch (dashboard.tailoring().status) {
@@ -175,7 +247,9 @@
         }
       }
     </article>
+</ng-template>
 
+<ng-template #interests>
     <article class="dashboard-card" data-testid="widget-interests">
       <span>Interests</span>
       @switch (dashboard.interests().status) {
@@ -193,10 +267,10 @@
         }
       }
     </article>
-  </section>
-}
+</ng-template>
 
-<section class="dashboard-list dashboard-normalization">
+<ng-template #normalization>
+<section class="dashboard-list dashboard-normalization dashboard-wide" data-testid="widget-normalization">
   <div class="dashboard-list__header">
     <h2>Job normalization</h2>
     <span data-testid="normalization-in-progress">
@@ -228,3 +302,4 @@
     <p>No normalization jobs yet. Submit a job posting to get started.</p>
   }
 </section>
+</ng-template>
