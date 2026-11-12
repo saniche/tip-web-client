@@ -153,6 +153,9 @@
         @default {
           @if (dashboard.applications().data; as applications) {
             <strong data-testid="follow-ups-count">{{ applications.followUpsDueCount }}</strong>
+            @if (applications.counted < applications.total) {
+              <small>Follow-ups cover only {{ applications.counted }} of {{ applications.total }} applications. Other entries may also have follow-ups due.</small>
+            }
             @if (applications.followUpsDue.length > 0) {
               <ul class="dashboard-compact">
                 @for (item of applications.followUpsDue; track item.id) {
