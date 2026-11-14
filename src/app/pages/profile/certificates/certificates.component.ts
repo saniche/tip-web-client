@@ -1,16 +1,35 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { ProfileCertificate } from '../../../core/models/profile.models';
+import { EditorItemComponent } from '../editor-item/editor-item.component';
 
 @Component({
-  imports: [],
+  imports: [EditorItemComponent],
   selector: 'app-certificates-editor',
   templateUrl: './certificates.component.html',
+  styleUrl: '../profile-editor/editor-section.scss',
 })
 export class CertificatesComponent {
   @Input() certificates: ProfileCertificate[] = [];
   @Output() readonly certificatesChange = new EventEmitter<any[]>();
 
+  protected readonly openIndex = signal<number | null>(null);
+
+  protected setOpen(index: number, open: boolean): void {
+    this.openIndex.set(open ? index : null);
+  }
+
+  protected heading(certificate: ProfileCertificate): string {
+    return certificate.Name?.trim() || 'New certificate';
+  }
+
+  protected meta(certificate: ProfileCertificate): string {
+    return [certificate.Issuer?.trim(), certificate.Year]
+      .filter((part) => part !== null && part !== undefined && part !== '')
+      .join(', ');
+  }
+
   protected addCertificate(): void {
+    this.openIndex.set(this.certificates.length);
     this.certificatesChange.emit([...this.certificates, { Name: null, Issuer: null, Year: null }]);
   }
 
@@ -27,6 +46,7 @@ export class CertificatesComponent {
   }
 
   protected removeCertificate(index: number): void {
+    this.openIndex.set(null);
     this.certificatesChange.emit(this.certificates.filter((_, itemIndex) => itemIndex !== index));
   }
 

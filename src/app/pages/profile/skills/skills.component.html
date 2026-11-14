@@ -1,30 +1,69 @@
-<details class="card p-3 mb-3" open>
-  <summary class="mb-3">
-    <h2 id="skills-heading" class="h5 d-inline mb-0">Skills</h2>
-  </summary>
-  <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
-    <button class="btn btn-outline-primary btn-sm" type="button" (click)="addSkill()">Add skill</button>
+<section class="skills" aria-labelledby="skills-heading">
+  <div class="skills__head">
+    <h2 id="skills-heading" class="h5 mb-0">Skills</h2>
+    <span class="text-body-secondary">{{ skills.length }} in total</span>
   </div>
-  @for (skill of skills; track $index) {
-    <div class="row g-3 align-items-end mb-3">
-      <label class="col-12 col-md-5">
+
+  <div class="input-group skills__add">
+    <input
+      #newName
+      class="form-control"
+      type="text"
+      aria-label="New skill name"
+      placeholder="Add a skill, then press Enter"
+      (keydown.enter)="$event.preventDefault(); quickAdd(newName, newLevel)"
+    />
+    <select #newLevel class="form-select skills__add-level" aria-label="New skill level">
+      <option value="">No level</option>
+      @for (level of levels; track level) {
+        <option [value]="level">{{ level }}</option>
+      }
+    </select>
+    <button class="btn btn-outline-primary" type="button" (click)="quickAdd(newName, newLevel)">Add skill</button>
+  </div>
+
+  @for (group of groups(); track group.level) {
+    <div class="skills__group">
+      <h3 class="h6 skills__level">{{ group.level }} <span class="skills__count">{{ group.items.length }}</span></h3>
+      <ul class="skills__chips" [attr.aria-label]="group.level + ' skills'">
+        @for (item of group.items; track item.index) {
+          <li>
+            <button
+              class="skills__chip"
+              type="button"
+              [class.is-selected]="editingIndex() === item.index"
+              [attr.aria-expanded]="editingIndex() === item.index"
+              (click)="edit(item.index)"
+            >
+              {{ item.name || 'Unnamed skill' }}
+            </button>
+          </li>
+        }
+      </ul>
+    </div>
+  } @empty {
+    <p class="text-body-secondary mb-0">No skills yet. Add the first one above, or import a CV from Import documents.</p>
+  }
+
+  @if (editing(); as skill) {
+    <div class="skills__edit" role="group" aria-label="Edit selected skill">
+      <label class="skills__edit-name">
         Name
-        <input class="form-control" [value]="skillName(skill)" (input)="updateName($index, $event)" />
+        <input class="form-control" [value]="skill.name" (input)="updateName(skill.index, $event)" />
       </label>
-      <label class="col-12 col-md-5">
+      <label>
         Level
-        <select class="form-select" (change)="updateLevel($index, $event)">
-          <option value="" [selected]="skillLevel(skill) === ''">Not specified</option>
+        <select class="form-select" (change)="updateLevel(skill.index, $event)">
+          <option value="" [selected]="skill.level === ''">No level</option>
           @for (level of levels; track level) {
-            <option [value]="level" [selected]="skillLevel(skill) === level">{{ level }}</option>
+            <option [value]="level" [selected]="skill.level === level">{{ level }}</option>
           }
         </select>
       </label>
-      <div class="col-12 col-md-2">
-        <button class="btn btn-outline-danger w-100" type="button" (click)="removeSkill($index)">Remove</button>
+      <div class="skills__edit-actions">
+        <button class="btn btn-outline-danger btn-sm" type="button" (click)="removeSkill(skill.index)">Remove skill</button>
+        <button class="btn btn-outline-secondary btn-sm" type="button" (click)="edit(skill.index)">Done</button>
       </div>
     </div>
-  } @empty {
-    <p class="text-body-secondary mb-0">No skills added.</p>
   }
-</details>
+</section>

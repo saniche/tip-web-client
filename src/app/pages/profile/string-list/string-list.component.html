@@ -1,31 +1,63 @@
-<details class="card p-3 mb-3" open>
-  <summary class="mb-3">
-    <h3 class="h5 d-inline mb-0">{{ title }}</h3>
-  </summary>
-  <ul class="mb-3">
-    @for (item of items; track $index) {
-      <li class="mb-2">
-        <div class="d-flex align-items-center gap-2">
-          <input
-            class="form-control"
-            type="text"
-            [attr.aria-label]="title + ' item ' + ($index + 1)"
-            [value]="item"
-            (input)="updateItem($index, $event)"
-          />
+@if (variant === 'chips') {
+  <section class="string-chips" [attr.aria-label]="title">
+    <h3 class="h6">{{ title }}</h3>
+    <ul class="string-chips__list">
+      @for (item of items; track $index) {
+        <li class="string-chips__chip">
+          <span>{{ item || '(empty)' }}</span>
           <button
-            class="btn btn-outline-danger"
+            class="string-chips__remove"
             type="button"
-            [attr.aria-label]="'Remove ' + title + ' item ' + ($index + 1)"
+            [attr.aria-label]="'Remove ' + title + ' ' + item"
             (click)="removeItem($index)"
           >
-            Remove
+            ×
           </button>
-        </div>
-      </li>
-    } @empty {
-      <li class="text-body-secondary">No items added.</li>
-    }
-  </ul>
-  <button class="btn btn-outline-primary btn-sm" type="button" (click)="addItem()">Add item</button>
-</details>
+        </li>
+      } @empty {
+        <li class="text-body-secondary">None yet.</li>
+      }
+    </ul>
+    <div class="input-group input-group-sm">
+      <input
+        #entry
+        class="form-control"
+        type="text"
+        [attr.aria-label]="'Add ' + title"
+        placeholder="Type and press Enter"
+        (keydown.enter)="addFromInput(entry, $event)"
+      />
+      <button class="btn btn-outline-primary" type="button" (click)="addFromInput(entry)">Add</button>
+    </div>
+  </section>
+} @else {
+  <section class="string-list">
+    <h3 class="h6">{{ title }}</h3>
+    <ul class="list-unstyled mb-2">
+      @for (item of items; track $index) {
+        <li class="mb-2">
+          <div class="d-flex align-items-center gap-2">
+            <input
+              class="form-control"
+              type="text"
+              [attr.aria-label]="title + ' item ' + ($index + 1)"
+              [value]="item"
+              (input)="updateItem($index, $event)"
+            />
+            <button
+              class="btn btn-outline-danger btn-sm"
+              type="button"
+              [attr.aria-label]="'Remove ' + title + ' item ' + ($index + 1)"
+              (click)="removeItem($index)"
+            >
+              Remove
+            </button>
+          </div>
+        </li>
+      } @empty {
+        <li class="text-body-secondary">No items added.</li>
+      }
+    </ul>
+    <button class="btn btn-outline-primary btn-sm" type="button" (click)="addItem()">Add item</button>
+  </section>
+}

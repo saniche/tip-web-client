@@ -1,0 +1,138 @@
+:host {
+  display: block;
+}
+
+.profile-view {
+  display: grid;
+  gap: 1rem;
+
+  &__block {
+    display: grid;
+    gap: 0.9rem;
+    margin: 0;
+    padding: clamp(1rem, 2vw, 1.4rem);
+    border: 1px solid var(--tip-border);
+    border-radius: 0.8rem;
+    background: var(--tip-surface);
+
+    h2,
+    h3,
+    p,
+    ul,
+    ol {
+      margin: 0;
+    }
+  }
+
+  &__name {
+    font-size: 1.4rem;
+  }
+
+  &__facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 2rem;
+    margin: 0;
+
+    dt {
+      color: var(--tip-muted);
+      font-size: 0.8rem;
+      font-weight: 400;
+      text-transform: capitalize;
+    }
+
+    dd {
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  &__summary {
+    max-width: 65ch;
+    white-space: pre-line;
+  }
+
+  &__timeline {
+    display: grid;
+    gap: 1.25rem;
+    padding: 0;
+    list-style: none;
+
+    > li {
+      display: grid;
+      gap: 0.4rem;
+      padding-left: 1rem;
+      border-left: 3px solid var(--tip-border);
+    }
+
+    ul {
+      padding-left: 1.2rem;
+    }
+  }
+
+  &__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+  }
+
+  &__meta {
+    color: var(--tip-muted);
+    font-size: 0.9rem;
+  }
+
+  &__group {
+    display: grid;
+    gap: 0.4rem;
+
+    h3 {
+      color: var(--tip-muted);
+      font-weight: 600;
+    }
+  }
+
+  &__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    padding: 0;
+    list-style: none;
+
+    li {
+      padding: 0.2rem 0.75rem;
+      border: 1px solid var(--tip-border);
+      border-radius: 999px;
+      background: var(--tip-page);
+    }
+  }
+
+  &__plain {
+    display: grid;
+    gap: 0.6rem;
+    padding: 0;
+    list-style: none;
+
+    li {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.25rem 1rem;
+    }
+  }
+
+  &__other {
+    summary {
+      cursor: pointer;
+      color: var(--tip-muted);
+    }
+
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+  }
+}

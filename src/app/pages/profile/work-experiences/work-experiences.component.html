@@ -1,44 +1,51 @@
-<details class="card p-3 mb-3" open>
-  <summary class="mb-3">
-    <h2 id="work-experiences-heading" class="h5 d-inline mb-0">Work experiences</h2>
-  </summary>
-  <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+<section class="editor-section" aria-labelledby="work-experiences-heading">
+  <div class="editor-section__head">
+    <h2 id="work-experiences-heading" class="h5 mb-0">Work experiences</h2>
     <button class="btn btn-outline-primary btn-sm" type="button" (click)="addExperience()">Add experience</button>
   </div>
-  @for (experience of workExperiences; track $index) {
-    <div class="row g-3 align-items-end mb-3">
-      <label class="col-12 col-md-6">
-        Company
-        <input class="form-control" [value]="experience.Company ?? ''" (input)="updateText($index, 'Company', $event)" />
-      </label>
-      <label class="col-12 col-md-6">
-        Title
-        <input class="form-control" [value]="experience.Title ?? ''" (input)="updateText($index, 'Title', $event)" />
-      </label>
-      <label class="col-12 col-md-6">
-        Start date
-        <input class="form-control" type="date" [value]="experience.StartDate ?? ''" (input)="updateText($index, 'StartDate', $event)" />
-      </label>
-      <label class="col-12 col-md-6">
-        End date
-        <input class="form-control" type="date" [value]="experience.EndDate ?? ''" (input)="updateText($index, 'EndDate', $event)" />
-      </label>
-      <label class="col-12">
-        Summary
-        <textarea class="form-control" rows="3" [value]="experience.Summary ?? ''" (input)="updateText($index, 'Summary', $event)"></textarea>
-      </label>
-      <div class="col-12">
-        <app-string-list-editor
-          title="Realisation Description"
-          [items]="experience.RealisationDescription ?? []"
-          (itemsChange)="updateRealisationDescription($index, $event)"
-        />
-      </div>
-      <div class="col-12">
-        <button class="btn btn-outline-danger" type="button" (click)="removeExperience($index)">Remove</button>
-      </div>
-    </div>
-  } @empty {
-    <p class="text-body-secondary mb-0">No work experiences added.</p>
-  }
-</details>
+  <div class="editor-section__items">
+    @for (experience of workExperiences; track $index) {
+      <app-editor-item
+        [heading]="roleLabel(experience)"
+        [meta]="periodLabel(experience)"
+        [open]="openIndex() === $index"
+        (openChange)="setOpen($index, $event)"
+      >
+        <div class="row g-3 pt-3">
+          <label class="col-12 col-md-6">
+            Company
+            <input class="form-control" [value]="experience.Company ?? ''" (input)="updateText($index, 'Company', $event)" />
+          </label>
+          <label class="col-12 col-md-6">
+            Title
+            <input class="form-control" [value]="experience.Title ?? ''" (input)="updateText($index, 'Title', $event)" />
+          </label>
+          <label class="col-12 col-md-6">
+            Start date
+            <input class="form-control" type="date" [value]="experience.StartDate ?? ''" (input)="updateText($index, 'StartDate', $event)" />
+          </label>
+          <label class="col-12 col-md-6">
+            End date
+            <input class="form-control" type="date" [value]="experience.EndDate ?? ''" (input)="updateText($index, 'EndDate', $event)" />
+          </label>
+          <label class="col-12">
+            Summary
+            <textarea class="form-control" rows="3" [value]="experience.Summary ?? ''" (input)="updateText($index, 'Summary', $event)"></textarea>
+          </label>
+          <div class="col-12">
+            <app-string-list-editor
+              title="Realisation Description"
+              [items]="experience.RealisationDescription ?? []"
+              (itemsChange)="updateRealisationDescription($index, $event)"
+            />
+          </div>
+          <div class="col-12">
+            <button class="btn btn-outline-danger btn-sm" type="button" (click)="removeExperience($index)">Remove this experience</button>
+          </div>
+        </div>
+      </app-editor-item>
+    } @empty {
+      <p class="text-body-secondary mb-0">No work experiences yet. Add one, or import a CV from Import documents.</p>
+    }
+  </div>
+</section>

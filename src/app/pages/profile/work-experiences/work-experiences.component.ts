@@ -1,17 +1,22 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { ProfileWorkExperience } from '../../../core/models/profile.models';
+import { EditorItemComponent } from '../editor-item/editor-item.component';
 import { StringListComponent } from '../string-list/string-list.component';
 
 @Component({
-  imports: [StringListComponent],
+  imports: [EditorItemComponent, StringListComponent],
   selector: 'app-work-experiences-editor',
   templateUrl: './work-experiences.component.html',
+  styleUrl: '../profile-editor/editor-section.scss',
 })
 export class WorkExperiencesComponent {
   @Input() workExperiences: ProfileWorkExperience[] = [];
   @Output() readonly workExperiencesChange = new EventEmitter<any[]>();
 
+  protected readonly openIndex = signal<number | null>(null);
+
   protected addExperience(): void {
+    this.openIndex.set(this.workExperiences.length);
     this.workExperiencesChange.emit([
       ...this.workExperiences,
       {
@@ -23,6 +28,24 @@ export class WorkExperiencesComponent {
         RealisationDescription: [],
       },
     ]);
+  }
+
+  protected setOpen(index: number, open: boolean): void {
+    this.openIndex.set(open ? index : null);
+  }
+
+  protected roleLabel(experience: ProfileWorkExperience): string {
+    const title = experience.Title?.trim();
+    const company = experience.Company?.trim();
+    if (title && company) return `${title} at ${company}`;
+    return title || company || 'New experience';
+  }
+
+  protected periodLabel(experience: ProfileWorkExperience): string {
+    const start = monthOf(experience.StartDate);
+    const end = monthOf(experience.EndDate);
+    if (!start && !end) return '';
+    return `${start || '?'} to ${end || 'present'}`;
   }
 
   protected updateText(
@@ -38,6 +61,7 @@ export class WorkExperiencesComponent {
   }
 
   protected removeExperience(index: number): void {
+    this.openIndex.set(null);
     this.workExperiencesChange.emit(
       this.workExperiences.filter((_, itemIndex) => itemIndex !== index),
     );
@@ -50,6 +74,11 @@ export class WorkExperiencesComponent {
       ),
     );
   }
+}
+
+function monthOf(value: string | null | undefined): string {
+  const text = value?.trim() ?? '';
+  return /^\d{4}-\d{2}/.test(text) ? text.slice(0, 7) : text;
 }
 
 function textValue(event: Event): string | null {

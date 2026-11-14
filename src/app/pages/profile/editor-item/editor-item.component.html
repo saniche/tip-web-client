@@ -1,0 +1,17 @@
+<div class="editor-item" [class.is-open]="open()">
+  <button
+    class="editor-item__head"
+    type="button"
+    [attr.aria-expanded]="open()"
+    [attr.aria-controls]="bodyId"
+    (click)="openChange.emit(!open())"
+  >
+    <span class="editor-item__title">{{ heading() }}</span>&ngsp;
+    @if (meta()) {
+      <span class="editor-item__meta">{{ meta() }}</span>
+    }
+  </button>
+  <div class="editor-item__body" [id]="bodyId" [hidden]="!open()">
+    <ng-content />
+  </div>
+</div>

@@ -6,16 +6,12 @@
     <a class="btn btn-primary" routerLink="/auth">Open auth flow</a>
   </section>
 } @else {
-  <section class="profile-header row g-3 align-items-end">
-    <div class="col-12 col-lg-8">
-      <p class="profile-kicker">Profile builder</p>
-      <h1>Build your professional profile.</h1>
-      <p>Upload source documents for asynchronous processing, then review and refine the returned profile.</p>
+  <section class="profile-header">
+    <div>
+      <h1>My profile</h1>
+      <p>The profile used to match jobs and tailor your documents. Edit one section at a time, or import your CVs to fill it in.</p>
     </div>
-    <div class="col-12 col-lg-4 d-flex gap-2 justify-content-lg-end">
-      <button class="btn btn-outline-primary" type="button" (click)="load()" [disabled]="isLoading()">Refresh</button>
-      <button class="btn btn-primary" type="button" (click)="save()" [disabled]="isSaving()">Save profile</button>
-    </div>
+    <button class="btn btn-outline-primary" type="button" (click)="load()" [disabled]="isLoading()">Refresh</button>
   </section>
 
   @if (error()) {
@@ -23,151 +19,69 @@
       {{ error() }}
     </section>
   }
-  @if (saveMessage()) {
-    <section class="profile-alert profile-alert--success" aria-live="polite">{{ saveMessage() }}</section>
-  }
   @if (processingNotice()) {
     <section class="profile-alert profile-alert--notice" role="status">{{ processingNotice() }}</section>
   }
 
-  <section class="profile-card">
-    <div class="profile-card__heading">
-      <div>
-        <h2>Import source files</h2>
-        <p>Accepted formats: Markdown, DOCX, and PDF. You can select multiple files.</p>
-      </div>
-      <label class="btn btn-outline-primary">
-        Choose files
-        <input class="visually-hidden" type="file" accept=".md,.docx,.pdf" multiple
-          [disabled]="isPreparingMerge() || isUploading()" (change)="onFilesSelected($event)" />
-      </label>
+  <app-profile-editor
+    [profile]="editable()"
+    [saving]="isSaving()"
+    [loading]="isLoading()"
+    [statusMessage]="saveMessage()"
+    [importEnabled]="true"
+    [importStatus]="session()?.status ?? null"
+    (save)="saveProfile($event)"
+  >
+    <div profileImport>
+      <section class="profile-card">
+        <div class="profile-card__heading">
+          <div>
+            <h2>Import source files</h2>
+            <p>Accepted formats: Markdown, DOCX, and PDF. You can select multiple files.</p>
+          </div>
+          <label class="btn btn-outline-primary">
+            Choose files
+            <input class="visually-hidden" type="file" accept=".md,.docx,.pdf" multiple
+              [disabled]="isPreparingMerge() || isUploading()" (change)="onFilesSelected($event)" />
+          </label>
+        </div>
+        <label class="profile-merge-toggle">
+          <input type="checkbox" [checked]="mergeEnabled()"
+            [disabled]="isPreparingMerge() || isUploading()" (change)="onMergeToggle($event)" />
+          Merge selected files into one document
+        </label>
+        <p class="profile-merge-hint">Enabled by default. Files are combined locally with their filenames as section headings.</p>
+        @if (selectedFileNames().length > 0) {
+          <p class="profile-files">Selected: {{ selectedFileNames().join(', ') }}</p>
+        }
+        @if (isPreparingMerge()) {
+          <p class="profile-status" aria-live="polite">Preparing merged document…</p>
+        }
+        @if (uploadPreparationError()) {
+          <p class="profile-alert profile-alert--error" role="alert">{{ uploadPreparationError() }}</p>
+        }
+        @if (isUploading()) {
+          <p class="profile-status" aria-live="polite">Uploading files…</p>
+        }
+        @for (uploadError of uploadErrors(); track uploadError.fileName) {
+          <p class="profile-alert profile-alert--error" aria-live="polite">
+            {{ uploadError.fileName }}: {{ uploadError.message }}
+          </p>
+        }
+        @if (session(); as currentSession) {
+          <div class="profile-session" aria-live="polite">
+            <strong>Session status: {{ currentSession.status }}</strong>
+            <ul>
+              @for (file of currentSession.files; track file.id) {
+                <li>
+                  <span>{{ file.id }} — {{ file.status }}</span>
+                  @if (file.error) { <small>{{ file.error }}</small> }
+                </li>
+              }
+            </ul>
+          </div>
+        }
+      </section>
     </div>
-    <label class="profile-merge-toggle">
-      <input type="checkbox" [checked]="mergeEnabled()"
-        [disabled]="isPreparingMerge() || isUploading()" (change)="onMergeToggle($event)" />
-      Merge selected files into one document
-    </label>
-    <p class="profile-merge-hint">Enabled by default. Files are combined locally with their filenames as section headings.</p>
-    @if (selectedFileNames().length > 0) {
-      <p class="profile-files">Selected: {{ selectedFileNames().join(', ') }}</p>
-    }
-    @if (isPreparingMerge()) {
-      <p class="profile-status" aria-live="polite">Preparing merged document…</p>
-    }
-    @if (uploadPreparationError()) {
-      <p class="profile-alert profile-alert--error" role="alert">{{ uploadPreparationError() }}</p>
-    }
-    @if (isUploading()) {
-      <p class="profile-status" aria-live="polite">Uploading files…</p>
-    }
-    @for (uploadError of uploadErrors(); track uploadError.fileName) {
-      <p class="profile-alert profile-alert--error" aria-live="polite">
-        {{ uploadError.fileName }}: {{ uploadError.message }}
-      </p>
-    }
-    @if (session(); as currentSession) {
-      <div class="profile-session" aria-live="polite">
-        <strong>Session status: {{ currentSession.status }}</strong>
-        <ul>
-          @for (file of currentSession.files; track file.id) {
-            <li>
-              <span>{{ file.id }} — {{ file.status }}</span>
-              @if (file.error) { <small>{{ file.error }}</small> }
-            </li>
-          }
-        </ul>
-      </div>
-    }
-  </section>
-
-  <form class="profile-form" [formGroup]="form" (ngSubmit)="save()">
-    <section class="profile-card">
-      <h2>Contact and summary</h2>
-      <div class="row g-3">
-        <label class="col-12">Profile label<input class="form-control" formControlName="label" /></label>
-        <label class="col-12 col-md-6">Name<input class="form-control" formControlName="name" /></label>
-        <label class="col-12 col-md-6">Email<input class="form-control" type="email" formControlName="email" /></label>
-        <label class="col-12 col-md-6">Phone<input class="form-control" formControlName="phone" /></label>
-        <label class="col-12 col-md-6">Location<input class="form-control" formControlName="location" /></label>
-        <label class="col-12 col-md-6">LinkedIn<input class="form-control" formControlName="linkedin" /></label>
-        <label class="col-12 col-md-6">Output language<input class="form-control" formControlName="output_language" /></label>
-        <label class="col-12">Summary<textarea class="form-control" rows="4" formControlName="summary"></textarea></label>
-      </div>
-    </section>
-
-    <section class="profile-card">
-      <h2>Experience and preferences</h2>
-      <div class="row g-3">
-        <div class="col-12 col-md-6">
-          @if (hasUnsupportedStringListData('soft_skills')) {
-            <p class="profile-alert profile-alert--notice">Saved soft skills data contains unsupported values and remains unchanged unless you edit the list.</p>
-          }
-          <app-string-list-editor title="Soft skills" [items]="softSkills()" (itemsChange)="updateSoftSkills($event)" />
-        </div>
-        <label class="col-12 col-md-6">Total years of experience<input class="form-control" formControlName="total_years_of_experience" /></label>
-        <div class="col-12 col-md-6">
-          @if (hasUnsupportedStringListData('preferred_job_titles')) {
-            <p class="profile-alert profile-alert--notice">Saved preferred job titles data contains unsupported values and remains unchanged unless you edit the list.</p>
-          }
-          <app-string-list-editor title="Preferred job titles" [items]="preferredJobTitles()" (itemsChange)="updatePreferredJobTitles($event)" />
-        </div>
-        <div class="col-12 col-md-6">
-          @if (hasUnsupportedStringListData('preferred_locations')) {
-            <p class="profile-alert profile-alert--notice">Saved preferred locations data contains unsupported values and remains unchanged unless you edit the list.</p>
-          }
-          <app-string-list-editor title="Preferred locations" [items]="preferredLocations()" (itemsChange)="updatePreferredLocations($event)" />
-        </div>
-        <div class="col-12 col-md-6">
-          @if (hasUnsupportedStringListData('languages')) {
-            <p class="profile-alert profile-alert--notice">Saved languages data contains unsupported values and remains unchanged unless you edit the list.</p>
-          }
-          <app-string-list-editor title="Languages" [items]="languages()" (itemsChange)="updateLanguages($event)" />
-        </div>
-        <label class="col-12 col-md-6">Source<input class="form-control" formControlName="source" /></label>
-      </div>
-    </section>
-
-    <section class="profile-card" aria-labelledby="structured-profile-heading">
-      <h2 id="structured-profile-heading">Structured profile data</h2>
-      <p>Edit each list using its controls. Existing profile keys are preserved when you save.</p>
-      @if (hasNonListSectionData('core_competences')) {
-        <p class="profile-alert profile-alert--notice">Saved core competences data is not a list. It remains unchanged unless you edit the Core Competences section.</p>
-      }
-      <app-string-list-editor
-        title="Core Competences"
-        [items]="coreCompetences()"
-        (itemsChange)="updateCoreCompetences($event)"
-      />
-      @if (hasNonListSectionData('additional_informations')) {
-        <p class="profile-alert profile-alert--notice">Saved additional informations data is not a list. It remains unchanged unless you edit the Additional Informations section.</p>
-      }
-      <app-string-list-editor
-        title="Additional Informations"
-        [items]="additionalInformations()"
-        (itemsChange)="updateAdditionalInformations($event)"
-      />
-      @if (hasNonListSectionData('work_experiences')) {
-      <p class="profile-alert profile-alert--notice">Saved work experience data is not a list. It remains unchanged unless you
-        edit the Work experiences section.</p>
-      }
-      <app-work-experiences-editor [workExperiences]="workExperiences()" (workExperiencesChange)="updateWorkExperiences($event)" />
-      
-      @if (hasNonListSectionData('skills')) {
-        <p class="profile-alert profile-alert--notice">Saved skills data is not a list. It remains unchanged unless you edit the Skills section.</p>
-      }
-      <app-skills-editor [skills]="skills()" (skillsChange)="updateSkills($event)" />
-      
-      @if (hasNonListSectionData('certifications')) {
-        <p class="profile-alert profile-alert--notice">Saved certificate data is not a list. It remains unchanged unless you edit the Certificates section.</p>
-      }
-      <app-certificates-editor [certificates]="certificates()" (certificatesChange)="updateCertificates($event)" />
-      @if (hasNonListSectionData('education')) {
-        <p class="profile-alert profile-alert--notice">Saved education data is not a list. It remains unchanged unless you edit the Education section.</p>
-      }
-      <app-education-editor [education]="education()" (educationChange)="updateEducation($event)" />
-     
-    </section>
-
-    <button class="btn btn-primary" type="submit" [disabled]="isSaving()">Save profile</button>
-  </form>
+  </app-profile-editor>
 }

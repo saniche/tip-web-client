@@ -1,0 +1,173 @@
+<div class="profile-editor">
+  <nav class="profile-editor__nav" aria-label="Profile sections">
+    @for (section of sections(); track section.id) {
+      <button
+        class="profile-editor__nav-item"
+        type="button"
+        [class.is-active]="active() === section.id"
+        [attr.aria-current]="active() === section.id ? 'true' : null"
+        (click)="select(section.id)"
+      >
+        <span>{{ section.label }}</span>
+        @if (section.count !== null) {
+          <span class="profile-editor__count">{{ section.count }}</span>
+        } @else if (section.id === 'import' && importStatus()) {
+          <span class="profile-editor__count">{{ importStatus() }}</span>
+        }
+      </button>
+    }
+  </nav>
+
+  <div class="profile-editor__main">
+    <form
+      class="profile-form"
+      [formGroup]="form"
+      [hidden]="active() === 'import'"
+      (ngSubmit)="submit()"
+      (keydown.enter)="preventImplicitSubmit($event)"
+    >
+      <section class="profile-editor__pane" [hidden]="active() !== 'overview'" aria-labelledby="pane-overview">
+        <h2 id="pane-overview" class="h5">Contact and summary</h2>
+        <div class="row g-3">
+          <label class="col-12">Profile label<input class="form-control" formControlName="label" /></label>
+          <label class="col-12 col-md-6">Name<input class="form-control" formControlName="name" /></label>
+          <label class="col-12 col-md-6">
+            Email<input class="form-control" type="email" formControlName="email" />
+            @if (form.controls.email.touched && form.controls.email.invalid) {
+              <small class="text-danger">Enter a valid email address.</small>
+            }
+          </label>
+          <label class="col-12 col-md-6">Phone<input class="form-control" formControlName="phone" /></label>
+          <label class="col-12 col-md-6">Location<input class="form-control" formControlName="location" /></label>
+          <label class="col-12 col-md-6">LinkedIn<input class="form-control" formControlName="linkedin" /></label>
+          <label class="col-12 col-md-6">
+            Output language<input class="form-control" formControlName="output_language" />
+            @if (form.controls.output_language.touched && form.controls.output_language.invalid) {
+              <small class="text-danger">Output language is required.</small>
+            }
+          </label>
+          <label class="col-12">Summary<textarea class="form-control" rows="4" formControlName="summary"></textarea></label>
+        </div>
+      </section>
+
+      <section class="profile-editor__pane" [hidden]="active() !== 'experience'" aria-label="Experience">
+        @if (hasNonListSectionData('work_experiences')) {
+          <p class="profile-editor__notice">Saved work experience data is not a list. It remains unchanged unless you edit the Work experiences section.</p>
+        }
+        <app-work-experiences-editor
+          [workExperiences]="workExperiences()"
+          (workExperiencesChange)="updateSection('work_experiences', $event)"
+        />
+      </section>
+
+      <section class="profile-editor__pane" [hidden]="active() !== 'skills'" aria-label="Skills">
+        @if (hasNonListSectionData('skills')) {
+          <p class="profile-editor__notice">Saved skills data is not a list. It remains unchanged unless you edit the Skills section.</p>
+        }
+        <app-skills-editor [skills]="skills()" (skillsChange)="updateSection('skills', $event)" />
+
+        <div class="profile-editor__stack">
+          @if (hasUnsupportedStringListData('soft_skills')) {
+            <p class="profile-editor__notice">Saved soft skills data contains unsupported values and remains unchanged unless you edit the list.</p>
+          }
+          <app-string-list-editor
+            title="Soft skills"
+            variant="chips"
+            [items]="softSkills()"
+            (itemsChange)="updateSection('soft_skills', $event)"
+          />
+          @if (hasNonListSectionData('core_competences')) {
+            <p class="profile-editor__notice">Saved core competences data is not a list. It remains unchanged unless you edit the Core Competences section.</p>
+          }
+          <app-string-list-editor
+            title="Core Competences"
+            [items]="coreCompetences()"
+            (itemsChange)="updateSection('core_competences', $event)"
+          />
+        </div>
+      </section>
+
+      <section class="profile-editor__pane" [hidden]="active() !== 'education'" aria-label="Education">
+        @if (hasNonListSectionData('education')) {
+          <p class="profile-editor__notice">Saved education data is not a list. It remains unchanged unless you edit the Education section.</p>
+        }
+        <app-education-editor [education]="education()" (educationChange)="updateSection('education', $event)" />
+        @if (hasNonListSectionData('certifications')) {
+          <p class="profile-editor__notice">Saved certificate data is not a list. It remains unchanged unless you edit the Certificates section.</p>
+        }
+        <app-certificates-editor [certificates]="certificates()" (certificatesChange)="updateSection('certifications', $event)" />
+      </section>
+
+      <section class="profile-editor__pane" [hidden]="active() !== 'preferences'" aria-labelledby="pane-preferences">
+        <h2 id="pane-preferences" class="h5">Job preferences</h2>
+        <div class="profile-editor__stack">
+          @if (hasUnsupportedStringListData('preferred_job_titles')) {
+            <p class="profile-editor__notice">Saved preferred job titles data contains unsupported values and remains unchanged unless you edit the list.</p>
+          }
+          <app-string-list-editor
+            title="Preferred job titles"
+            variant="chips"
+            [items]="preferredJobTitles()"
+            (itemsChange)="updateSection('preferred_job_titles', $event)"
+          />
+          @if (hasUnsupportedStringListData('preferred_locations')) {
+            <p class="profile-editor__notice">Saved preferred locations data contains unsupported values and remains unchanged unless you edit the list.</p>
+          }
+          <app-string-list-editor
+            title="Preferred locations"
+            variant="chips"
+            [items]="preferredLocations()"
+            (itemsChange)="updateSection('preferred_locations', $event)"
+          />
+          @if (hasUnsupportedStringListData('languages')) {
+            <p class="profile-editor__notice">Saved languages data contains unsupported values and remains unchanged unless you edit the list.</p>
+          }
+          <app-string-list-editor
+            title="Languages"
+            variant="chips"
+            [items]="languages()"
+            (itemsChange)="updateSection('languages', $event)"
+          />
+          @if (hasNonListSectionData('additional_informations')) {
+            <p class="profile-editor__notice">Saved additional informations data is not a list. It remains unchanged unless you edit the Additional Informations section.</p>
+          }
+          <app-string-list-editor
+            title="Additional Informations"
+            [items]="additionalInformations()"
+            (itemsChange)="updateSection('additional_informations', $event)"
+          />
+        </div>
+
+        <details class="profile-editor__advanced">
+          <summary>Advanced fields</summary>
+          <div class="row g-3 pt-3">
+            <label class="col-12 col-md-6">Total years of experience<input class="form-control" formControlName="total_years_of_experience" /></label>
+            <label class="col-12 col-md-6">Source<input class="form-control" formControlName="source" /></label>
+          </div>
+        </details>
+      </section>
+
+      <div class="profile-editor__bar" role="group" aria-label="Save profile">
+        <span class="profile-editor__state" aria-live="polite">
+          @if (dirty()) {
+            <span class="profile-editor__unsaved">Unsaved changes</span>
+          } @else if (statusMessage()) {
+            {{ statusMessage() }}
+          }
+        </span>
+        <button class="btn btn-outline-secondary" type="button" [disabled]="!dirty() || saving()" (click)="discard()">
+          Discard changes
+        </button>
+        <button class="btn btn-primary" type="submit" [disabled]="saving() || !dirty()">
+          {{ saving() ? 'Saving…' : 'Save profile' }}
+        </button>
+      </div>
+    </form>
+
+    @if (importEnabled()) {
+      <section class="profile-editor__import" [hidden]="active() !== 'import'" aria-label="Import documents">
+        <ng-content select="[profileImport]" />
+      </section>
+    }
+  </div>
+</div>

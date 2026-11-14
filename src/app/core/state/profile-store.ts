@@ -58,7 +58,7 @@ export class ProfileStore {
     this.error.set(null);
     this.saveMessage.set(null);
     this.api
-      .updateProfile(data, label, outputLanguage)
+      .updateProfile(this.profile()?.id ?? '', data, label, outputLanguage)
       .pipe(finalize(() => this.isSaving.set(false)))
       .subscribe({
         next: (profile) => {

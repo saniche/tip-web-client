@@ -131,17 +131,11 @@ describe('Profile', () => {
     labelInput.value = 'Engineering profile';
     labelInput.dispatchEvent(new Event('input'));
 
-    const addSkill: HTMLButtonElement = fixture.nativeElement.querySelector(
-      'app-skills-editor button',
-    );
-    addSkill.click();
-    fixture.detectChanges();
-
     const skillName: HTMLInputElement = fixture.nativeElement.querySelector(
-      'app-skills-editor input',
+      'app-skills-editor input[aria-label="New skill name"]',
     );
     skillName.value = 'TypeScript';
-    skillName.dispatchEvent(new Event('input'));
+    skillName.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }));
     fixture.detectChanges();
 
     const form: HTMLFormElement = fixture.nativeElement.querySelector('.profile-form');
@@ -161,21 +155,51 @@ describe('Profile', () => {
     expect(outputLanguage).toBe('English');
   });
 
-  it('makes every structured profile section collapsible', async () => {
+  it('shows one profile section at a time with counts in the navigation', async () => {
+    store.profile.set({
+      id: 'profile-id',
+      user_id: 'user-id',
+      label: 'Ada profile',
+      output_language: 'English',
+      data: { name: 'Ada', skills: [{ name: 'TypeScript', level: 'Expert' }, { name: 'SQL' }] },
+    });
     await createFixture();
+    const root = fixture.nativeElement as HTMLElement;
+    const visiblePanes = () =>
+      Array.from(root.querySelectorAll<HTMLElement>('.profile-editor__pane'))
+        .filter((pane) => !pane.hidden)
+        .map((pane) => pane.getAttribute('aria-label') ?? pane.getAttribute('aria-labelledby'));
+    const navButton = (label: string) =>
+      Array.from(root.querySelectorAll<HTMLButtonElement>('.profile-editor__nav-item')).find((button) =>
+        button.textContent!.includes(label),
+      )!;
 
-    const sections = fixture.nativeElement.querySelectorAll(
-      'app-skills-editor details, app-certificates-editor details, app-education-editor details, app-work-experiences-editor details, app-string-list-editor details',
-    ) as NodeListOf<HTMLDetailsElement>;
-    expect(sections).toHaveLength(10);
-    expect(Array.from(sections).every((section) => section.open)).toBe(true);
+    expect(visiblePanes()).toEqual(['pane-overview']);
+    expect(navButton('Skills').textContent).toContain('2');
 
-    for (const section of sections) {
-      (section.querySelector('summary') as HTMLElement).click();
-    }
+    navButton('Skills').click();
     fixture.detectChanges();
+    expect(visiblePanes()).toEqual(['Skills']);
+    expect(navButton('Skills').getAttribute('aria-current')).toBe('true');
+    expect(navButton('Overview').getAttribute('aria-current')).toBeNull();
+  });
 
-    expect(Array.from(sections).every((section) => !section.open)).toBe(true);
+  it('opens on Import when there is no profile yet and leaves it once a profile arrives', async () => {
+    await createFixture();
+    const root = fixture.nativeElement as HTMLElement;
+    const active = () => root.querySelector('.profile-editor__nav-item.is-active')!.textContent!.trim();
+    expect(active()).toContain('Import documents');
+    expect(root.querySelector<HTMLElement>('.profile-editor__import')!.hidden).toBe(false);
+
+    store.profile.set({
+      id: 'profile-id',
+      user_id: 'user-id',
+      label: 'Ada profile',
+      output_language: 'English',
+      data: { name: 'Ada' },
+    });
+    fixture.detectChanges();
+    expect(active()).toContain('Overview');
   });
 
   it('saves edits to core competences and additional informations lists', async () => {
@@ -255,15 +279,11 @@ describe('Profile', () => {
         `app-string-list-editor[title="${title}"]`,
       ) as HTMLElement;
       if (title === 'Soft skills') {
-        expect((editor.querySelector('input') as HTMLInputElement).value).toBe('Communication');
+        expect(editor.querySelector('.string-chips__chip')!.textContent).toContain('Communication');
       }
-      (editor.querySelector('button:not([aria-label])') as HTMLButtonElement).click();
-      fixture.detectChanges();
-
-      const inputs = editor.querySelectorAll('input');
-      const newItem = inputs[inputs.length - 1] as HTMLInputElement;
-      newItem.value = item;
-      newItem.dispatchEvent(new Event('input'));
+      const entry = editor.querySelector(`input[aria-label="Add ${title}"]`) as HTMLInputElement;
+      entry.value = item;
+      entry.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }));
       fixture.detectChanges();
     }
 
