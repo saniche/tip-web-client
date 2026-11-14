@@ -110,93 +110,52 @@
     <div class="interests__summary visually-hidden" aria-live="polite">
       {{ currentPage.total }} {{ currentPage.total === 1 ? 'interest' : 'interests' }}
     </div>
-    <div class="table-responsive">
-      <table class="table table-hover align-middle">
-        <caption class="visually-hidden">
-          Personal job interests
-        </caption>
-        <thead>
-          <tr>
-            <th scope="col">Job Title</th>
-            <th scope="col">Company</th>
-            <th scope="col">Location</th>
-            <th scope="col">Posting Date</th>
-            <th scope="col">Interest Date</th>
-            <th scope="col">Source</th>
-            <th scope="col" class="text-end">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (interest of interests(); track interest.id) {
-            <tr>
-              <td>
-                <a [routerLink]="['/normalized-jobs', interest.job.id]">{{
-                  displayValue(interest.job.title)
-                }}</a>
-              </td>
-              <td>{{ displayValue(interest.job.company) }}</td>
-              <td>{{ displayValue(interest.job.location) }}</td>
-              <td>{{ displayValue(interest.job.postingDate) }}</td>
-              <td>{{ displayValue(interest.createdAt) }}</td>
-              <td>
-                @if (interest.job.source) {
-                  <a
-                    [href]="interest.job.source"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    >{{ formatSource(interest.job.source) }}</a
-                  >
-                } @else {
-                  —
-                }
-              </td>
-              <td class="text-end">
-                <div class="d-inline-flex flex-wrap justify-content-end gap-1">
-                  <button
-                    class="btn btn-sm btn-outline-primary"
-                    type="button"
-                    [disabled]="matchingStore.isLocked()"
-                    [attr.data-testid]="'add-to-matching-' + interest.id"
-                    (click)="addToMatchingSession(interest)"
-                  >
-                    Add to session
-                  </button>
-                @if (pendingRemovalId() === interest.id) {
-                  <span class="spinner-border spinner-border-sm text-secondary" role="status" aria-hidden="true"></span>
-                  <span class="visually-hidden">Removing…</span>
-                } @else if (confirmingRemovalId() === interest.id) {
-                  <div class="d-inline-flex gap-1 align-items-center">
-                    <button
-                      class="btn btn-sm btn-danger"
-                      type="button"
-                      (click)="confirmRemoval(interest)"
-                    >
-                      Confirm
-                    </button>
-                    <button
-                      class="btn btn-sm btn-outline-secondary"
-                      type="button"
-                      (click)="cancelRemoval()"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                } @else {
-                  <button
-                    class="btn btn-sm btn-outline-danger"
-                    type="button"
-                    [disabled]="pendingRemovalId() !== null"
-                    (click)="startRemoval(interest.id)"
-                  >
-                    Remove
-                  </button>
-                }
-                </div>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
+    <ul class="job-grid" role="list" aria-label="Personal job interests">
+      @for (interest of interests(); track interest.id) {
+        <li>
+          <app-job-card
+            [jobId]="interest.job.id"
+            [title]="interest.job.title"
+            [company]="interest.job.company"
+            [location]="interest.job.location"
+            [postingDate]="interest.job.postingDate"
+            [source]="interest.job.source"
+            extraLabel="Interested on"
+            [extraValue]="interest.createdAt"
+            [inSession]="inSession(interest.job.id)"
+          >
+            <button
+              class="btn btn-sm btn-outline-primary"
+              type="button"
+              [disabled]="matchingStore.isLocked() || inSession(interest.job.id)"
+              [attr.data-testid]="'add-to-matching-' + interest.id"
+              (click)="addToMatchingSession(interest)"
+            >
+              {{ inSession(interest.job.id) ? 'In session' : 'Add to session' }}
+            </button>
+            @if (pendingRemovalId() === interest.id) {
+              <span class="spinner-border spinner-border-sm text-secondary" role="status" aria-hidden="true"></span>
+              <span class="visually-hidden">Removing…</span>
+            } @else if (confirmingRemovalId() === interest.id) {
+              <button class="btn btn-sm btn-danger" type="button" (click)="confirmRemoval(interest)">
+                Confirm
+              </button>
+              <button class="btn btn-sm btn-outline-secondary" type="button" (click)="cancelRemoval()">
+                Cancel
+              </button>
+            } @else {
+              <button
+                class="btn btn-sm btn-outline-danger"
+                type="button"
+                [disabled]="pendingRemovalId() !== null"
+                (click)="startRemoval(interest.id)"
+              >
+                Remove
+              </button>
+            }
+          </app-job-card>
+        </li>
+      }
+    </ul>
   }
 </section>

@@ -1,0 +1,43 @@
+<article class="job-card" [class.job-card--in-session]="inSession()" [attr.aria-labelledby]="'job-card-title-' + jobId()">
+  <header class="job-card__head">
+    <h2 class="job-card__title" [id]="'job-card-title-' + jobId()">
+      <a [routerLink]="['/normalized-jobs', jobId()]">{{ display(title()) }}</a>
+    </h2>
+    <p class="job-card__company">{{ display(company()) }}</p>
+    @if (inSession()) {
+      <span class="job-card__badge">In session</span>
+    }
+  </header>
+
+  <dl class="job-card__facts">
+    <div>
+      <dt>Location</dt>
+      <dd>{{ display(location()) }}</dd>
+    </div>
+    <div>
+      <dt>Posted</dt>
+      <dd>{{ date(postingDate()) }}</dd>
+    </div>
+    @if (extraLabel()) {
+      <div>
+        <dt>{{ extraLabel() }}</dt>
+        <dd>{{ date(extraValue()) }}</dd>
+      </div>
+    }
+  </dl>
+
+  <footer class="job-card__foot">
+    <span class="job-card__source">
+      @if (sourceLink(); as link) {
+        <a [href]="link.href" target="_blank" rel="noopener noreferrer">{{ link.label }}</a>
+      } @else if (sourceText(); as text) {
+        {{ text }}
+      } @else {
+        —
+      }
+    </span>
+    <div class="job-card__actions">
+      <ng-content />
+    </div>
+  </footer>
+</article>

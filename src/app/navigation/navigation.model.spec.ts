@@ -13,4 +13,9 @@ describe('navigation model', () => {
     }
     expect(navigationAreas.find((area) => area.id === 'settings')?.availability).toBe('hidden');
   });
+
+  it('exposes the current profile and the profile list under My Profile', () => {
+    const profile = navigationAreas.find((area) => area.id === 'profile');
+    expect(profile?.destinations.map((item) => item.path)).toEqual(['/profile', '/profiles']);
+  });
 });

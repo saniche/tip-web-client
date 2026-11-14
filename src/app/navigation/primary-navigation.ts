@@ -1,4 +1,4 @@
-import { Component, ElementRef, inject, signal, ViewChild } from '@angular/core';
+import { Component, ElementRef, HostListener, inject, signal, ViewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { filter } from 'rxjs';
@@ -13,6 +13,7 @@ import { AreaId, navigationAreas } from './navigation.model';
 })
 export class PrimaryNavigation {
   private readonly router = inject(Router);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   protected readonly context = inject(NavigationContext);
   protected readonly areas = navigationAreas.filter((area) => area.availability !== 'hidden');
   protected readonly menuOpen = signal(false);
@@ -30,6 +31,14 @@ export class PrimaryNavigation {
       this.menuOpen.set(false);
       this.openArea.set(null);
     });
+  }
+
+  @HostListener('document:click', ['$event'])
+  protected closeAreaOnOutsideClick(event: MouseEvent): void {
+    if (this.openArea() === null) return;
+    const target = event.target;
+    if (target instanceof Node && this.host.nativeElement.contains(target)) return;
+    this.openArea.set(null);
   }
 
   protected toggleArea(id: AreaId): void {

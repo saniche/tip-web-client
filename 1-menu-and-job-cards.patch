@@ -1,0 +1,836 @@
+diff --git a/src/app/core/state/matching-store.ts b/src/app/core/state/matching-store.ts
+index 0245904..1c5ff8e 100644
+--- a/src/app/core/state/matching-store.ts
++++ b/src/app/core/state/matching-store.ts
+@@ -186,6 +186,9 @@ export class MatchingStore {
+ 
+   readonly session = computed(() => this.isOwnerCurrent() ? this.state().session : null);
+   readonly summary = computed(() => this.isOwnerCurrent() ? this.state().summary : null);
++  readonly selectedJobIds = computed(
++    () => new Set(this.session()?.selectedJobs.map((job) => job.jobId) ?? []),
++  );
+   readonly storageError = computed(() => this.state().storageError);
+   readonly trackingWarning = computed(() => this.state().trackingWarning);
+   readonly membershipCheckError = computed(() => this.state().membershipCheckError);
+diff --git a/src/app/navigation/navigation.model.spec.ts b/src/app/navigation/navigation.model.spec.ts
+index 49bfc2a..a0940c2 100644
+--- a/src/app/navigation/navigation.model.spec.ts
++++ b/src/app/navigation/navigation.model.spec.ts
+@@ -13,4 +13,9 @@ describe('navigation model', () => {
+     }
+     expect(navigationAreas.find((area) => area.id === 'settings')?.availability).toBe('hidden');
+   });
++
++  it('exposes the current profile and the profile list under My Profile', () => {
++    const profile = navigationAreas.find((area) => area.id === 'profile');
++    expect(profile?.destinations.map((item) => item.path)).toEqual(['/profile', '/profiles']);
++  });
+ });
+diff --git a/src/app/navigation/navigation.model.ts b/src/app/navigation/navigation.model.ts
+index eeb65b4..25e8b74 100644
+--- a/src/app/navigation/navigation.model.ts
++++ b/src/app/navigation/navigation.model.ts
+@@ -24,7 +24,7 @@ export const navigationAreas: readonly NavigationArea[] = [
+   { id: 'dashboard', label: 'Dashboard', icon: 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z', availability: 'available',
+     destinations: [{ label: 'Overview', path: '/dashboard' }] },
+   { id: 'profile', label: 'My Profile', icon: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M4 21a8 8 0 0 1 16 0', availability: 'available',
+-    destinations: [{ label: 'Profile', path: '/profile' }] },
++    destinations: [{ label: 'Current profile', path: '/profile' }, { label: 'All profiles', path: '/profiles' }] },
+   { id: 'jobs', label: 'Jobs', icon: 'M3 7h18v13H3z M8 7V4h8v3 M3 12h18', availability: 'available',
+     destinations: [{ label: 'Normalized jobs', path: '/normalized-jobs' }, { label: 'Normalize job', path: '/normalize-job' }, { label: 'Interests', path: '/jobs/interests' }] },
+   { id: 'matching', label: 'Job Matching', icon: 'M4 5h16 M4 12h10 M4 19h16 M17 10l2 2 3-4', availability: 'available',
+diff --git a/src/app/navigation/primary-navigation-responsive.spec.ts b/src/app/navigation/primary-navigation-responsive.spec.ts
+index 7d56baa..aa79707 100644
+--- a/src/app/navigation/primary-navigation-responsive.spec.ts
++++ b/src/app/navigation/primary-navigation-responsive.spec.ts
+@@ -44,4 +44,25 @@ describe('navigation disclosures', () => {
+     fixture.detectChanges();
+     expect(menu.getAttribute('aria-expanded')).toBe('false');
+   });
++
++  it('closes an open area when the user clicks outside the navigation', () => {
++    TestBed.configureTestingModule({ imports: [PrimaryNavigation], providers: [provideRouter([])] });
++    const fixture = TestBed.createComponent(PrimaryNavigation);
++    fixture.detectChanges();
++    const root = fixture.nativeElement as HTMLElement;
++    document.body.appendChild(root);
++    const profile = root.querySelector<HTMLButtonElement>('[data-area="profile"] button')!;
++    profile.click();
++    fixture.detectChanges();
++    expect(profile.getAttribute('aria-expanded')).toBe('true');
++
++    root.querySelector<HTMLElement>('#navigation-profile')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
++    fixture.detectChanges();
++    expect(profile.getAttribute('aria-expanded')).toBe('true');
++
++    document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
++    fixture.detectChanges();
++    expect(profile.getAttribute('aria-expanded')).toBe('false');
++    root.remove();
++  });
+ });
+diff --git a/src/app/navigation/primary-navigation.ts b/src/app/navigation/primary-navigation.ts
+index e3f0834..fd10723 100644
+--- a/src/app/navigation/primary-navigation.ts
++++ b/src/app/navigation/primary-navigation.ts
+@@ -1,4 +1,4 @@
+-import { Component, ElementRef, inject, signal, ViewChild } from '@angular/core';
++import { Component, ElementRef, HostListener, inject, signal, ViewChild } from '@angular/core';
+ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+ import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
+ import { filter } from 'rxjs';
+@@ -13,6 +13,7 @@ import { AreaId, navigationAreas } from './navigation.model';
+ })
+ export class PrimaryNavigation {
+   private readonly router = inject(Router);
++  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+   protected readonly context = inject(NavigationContext);
+   protected readonly areas = navigationAreas.filter((area) => area.availability !== 'hidden');
+   protected readonly menuOpen = signal(false);
+@@ -32,6 +33,14 @@ export class PrimaryNavigation {
+     });
+   }
+ 
++  @HostListener('document:click', ['$event'])
++  protected closeAreaOnOutsideClick(event: MouseEvent): void {
++    if (this.openArea() === null) return;
++    const target = event.target;
++    if (target instanceof Node && this.host.nativeElement.contains(target)) return;
++    this.openArea.set(null);
++  }
++
+   protected toggleArea(id: AreaId): void {
+     this.openArea.update((open) => open === id ? null : id);
+   }
+diff --git a/src/app/pages/interests/interests.html b/src/app/pages/interests/interests.html
+index bcde318..fba6ef0 100644
+--- a/src/app/pages/interests/interests.html
++++ b/src/app/pages/interests/interests.html
+@@ -110,93 +110,52 @@
+     <div class="interests__summary visually-hidden" aria-live="polite">
+       {{ currentPage.total }} {{ currentPage.total === 1 ? 'interest' : 'interests' }}
+     </div>
+-    <div class="table-responsive">
+-      <table class="table table-hover align-middle">
+-        <caption class="visually-hidden">
+-          Personal job interests
+-        </caption>
+-        <thead>
+-          <tr>
+-            <th scope="col">Job Title</th>
+-            <th scope="col">Company</th>
+-            <th scope="col">Location</th>
+-            <th scope="col">Posting Date</th>
+-            <th scope="col">Interest Date</th>
+-            <th scope="col">Source</th>
+-            <th scope="col" class="text-end">Actions</th>
+-          </tr>
+-        </thead>
+-        <tbody>
+-          @for (interest of interests(); track interest.id) {
+-            <tr>
+-              <td>
+-                <a [routerLink]="['/normalized-jobs', interest.job.id]">{{
+-                  displayValue(interest.job.title)
+-                }}</a>
+-              </td>
+-              <td>{{ displayValue(interest.job.company) }}</td>
+-              <td>{{ displayValue(interest.job.location) }}</td>
+-              <td>{{ displayValue(interest.job.postingDate) }}</td>
+-              <td>{{ displayValue(interest.createdAt) }}</td>
+-              <td>
+-                @if (interest.job.source) {
+-                  <a
+-                    [href]="interest.job.source"
+-                    target="_blank"
+-                    rel="noopener noreferrer"
+-                    >{{ formatSource(interest.job.source) }}</a
+-                  >
+-                } @else {
+-                  —
+-                }
+-              </td>
+-              <td class="text-end">
+-                <div class="d-inline-flex flex-wrap justify-content-end gap-1">
+-                  <button
+-                    class="btn btn-sm btn-outline-primary"
+-                    type="button"
+-                    [disabled]="matchingStore.isLocked()"
+-                    [attr.data-testid]="'add-to-matching-' + interest.id"
+-                    (click)="addToMatchingSession(interest)"
+-                  >
+-                    Add to session
+-                  </button>
+-                @if (pendingRemovalId() === interest.id) {
+-                  <span class="spinner-border spinner-border-sm text-secondary" role="status" aria-hidden="true"></span>
+-                  <span class="visually-hidden">Removing…</span>
+-                } @else if (confirmingRemovalId() === interest.id) {
+-                  <div class="d-inline-flex gap-1 align-items-center">
+-                    <button
+-                      class="btn btn-sm btn-danger"
+-                      type="button"
+-                      (click)="confirmRemoval(interest)"
+-                    >
+-                      Confirm
+-                    </button>
+-                    <button
+-                      class="btn btn-sm btn-outline-secondary"
+-                      type="button"
+-                      (click)="cancelRemoval()"
+-                    >
+-                      Cancel
+-                    </button>
+-                  </div>
+-                } @else {
+-                  <button
+-                    class="btn btn-sm btn-outline-danger"
+-                    type="button"
+-                    [disabled]="pendingRemovalId() !== null"
+-                    (click)="startRemoval(interest.id)"
+-                  >
+-                    Remove
+-                  </button>
+-                }
+-                </div>
+-              </td>
+-            </tr>
+-          }
+-        </tbody>
+-      </table>
+-    </div>
++    <ul class="job-grid" role="list" aria-label="Personal job interests">
++      @for (interest of interests(); track interest.id) {
++        <li>
++          <app-job-card
++            [jobId]="interest.job.id"
++            [title]="interest.job.title"
++            [company]="interest.job.company"
++            [location]="interest.job.location"
++            [postingDate]="interest.job.postingDate"
++            [source]="interest.job.source"
++            extraLabel="Interested on"
++            [extraValue]="interest.createdAt"
++            [inSession]="inSession(interest.job.id)"
++          >
++            <button
++              class="btn btn-sm btn-outline-primary"
++              type="button"
++              [disabled]="matchingStore.isLocked() || inSession(interest.job.id)"
++              [attr.data-testid]="'add-to-matching-' + interest.id"
++              (click)="addToMatchingSession(interest)"
++            >
++              {{ inSession(interest.job.id) ? 'In session' : 'Add to session' }}
++            </button>
++            @if (pendingRemovalId() === interest.id) {
++              <span class="spinner-border spinner-border-sm text-secondary" role="status" aria-hidden="true"></span>
++              <span class="visually-hidden">Removing…</span>
++            } @else if (confirmingRemovalId() === interest.id) {
++              <button class="btn btn-sm btn-danger" type="button" (click)="confirmRemoval(interest)">
++                Confirm
++              </button>
++              <button class="btn btn-sm btn-outline-secondary" type="button" (click)="cancelRemoval()">
++                Cancel
++              </button>
++            } @else {
++              <button
++                class="btn btn-sm btn-outline-danger"
++                type="button"
++                [disabled]="pendingRemovalId() !== null"
++                (click)="startRemoval(interest.id)"
++              >
++                Remove
++              </button>
++            }
++          </app-job-card>
++        </li>
++      }
++    </ul>
+   }
+ </section>
+diff --git a/src/app/pages/interests/interests.spec.ts b/src/app/pages/interests/interests.spec.ts
+index 03f208f..3d68abf 100644
+--- a/src/app/pages/interests/interests.spec.ts
++++ b/src/app/pages/interests/interests.spec.ts
+@@ -231,7 +231,7 @@ describe('Interests Component', () => {
+ 
+   it('requires confirmation before removing an interest', () => {
+     render();
+-    const removeBtn = fixture.nativeElement.querySelector('tbody tr button.btn-outline-danger') as HTMLButtonElement;
++    const removeBtn = fixture.nativeElement.querySelector('.job-card button.btn-outline-danger') as HTMLButtonElement;
+     expect(removeBtn).toBeTruthy();
+     expect(removeBtn.textContent?.trim()).toBe('Remove');
+ 
+@@ -268,9 +268,9 @@ describe('Interests Component', () => {
+     fixture.detectChanges();
+ 
+     expect(api.removeInterest).toHaveBeenCalledTimes(1);
+-    expect(fixture.nativeElement.querySelector('tbody tr .spinner-border')).toBeTruthy();
++    expect(fixture.nativeElement.querySelector('.job-card .spinner-border')).toBeTruthy();
+     const remainingRemoveButton = fixture.nativeElement.querySelector(
+-      'tbody tr:nth-child(2) button.btn-outline-danger',
++      '.job-grid li:nth-child(2) button.btn-outline-danger',
+     ) as HTMLButtonElement;
+     expect(remainingRemoveButton.disabled).toBe(true);
+ 
+diff --git a/src/app/pages/interests/interests.ts b/src/app/pages/interests/interests.ts
+index a5b02a5..77b69c9 100644
+--- a/src/app/pages/interests/interests.ts
++++ b/src/app/pages/interests/interests.ts
+@@ -1,9 +1,10 @@
+ import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+-import { ActivatedRoute, ParamMap, Params, Router, RouterLink } from '@angular/router';
++import { ActivatedRoute, ParamMap, Params, Router } from '@angular/router';
+ import { EMPTY, Subject, catchError, combineLatest, debounceTime, startWith, switchMap, tap } from 'rxjs';
+ import { distinctUntilChanged, map } from 'rxjs/operators';
+ import { TipApi } from '../../core/api/tip-api';
++import { JobCard } from '../../shared/job-card/job-card';
+ import { MatchingStore } from '../../core/state/matching-store';
+ import {
+   JobInterest,
+@@ -61,7 +62,7 @@ function filtersEqual(left: JobInterestFilters, right: JobInterestFilters): bool
+ }
+ 
+ @Component({
+-  imports: [RouterLink],
++  imports: [JobCard],
+   selector: 'app-interests',
+   styleUrl: './interests.scss',
+   templateUrl: './interests.html',
+@@ -284,16 +285,7 @@ export class Interests {
+       });
+   }
+ 
+-  protected displayValue(value: string | null | undefined): string {
+-    return value?.trim() || '—';
+-  }
+-
+-  protected formatSource(source: string): string {
+-    try {
+-      const parsed = new URL(source);
+-      return parsed.hostname.replace(/^www\./, '');
+-    } catch {
+-      return source;
+-    }
++  protected inSession(jobId: string): boolean {
++    return this.matchingStore.selectedJobIds().has(jobId);
+   }
+ }
+diff --git a/src/app/pages/normalized-jobs/normalized-jobs.html b/src/app/pages/normalized-jobs/normalized-jobs.html
+index 3d01d01..3436255 100644
+--- a/src/app/pages/normalized-jobs/normalized-jobs.html
++++ b/src/app/pages/normalized-jobs/normalized-jobs.html
+@@ -153,46 +153,30 @@
+     <div class="normalized-jobs__summary" aria-live="polite">
+       {{ currentPage.total }} {{ currentPage.total === 1 ? 'job' : 'jobs' }}
+     </div>
+-    <div class="table-responsive">
+-      <table class="table table-hover align-middle">
+-        <caption class="visually-hidden">
+-          Normalized job listings
+-        </caption>
+-        <thead>
+-          <tr>
+-            <th scope="col">Title</th>
+-            <th scope="col">Company</th>
+-            <th scope="col">Location</th>
+-            <th scope="col">Posting date</th>
+-            <th scope="col">Source</th>
+-            <th scope="col" class="text-end">Matching session</th>
+-          </tr>
+-        </thead>
+-        <tbody>
+-          @for (job of jobs(); track job.id) {
+-            <tr>
+-              <td>
+-                <a [routerLink]="['/normalized-jobs', job.id]">{{ displayValue(job.title) }}</a>
+-              </td>
+-              <td>{{ displayValue(job.company) }}</td>
+-              <td>{{ displayValue(job.location) }}</td>
+-              <td>{{ displayValue(job.postingDate) }}</td>
+-              <td>{{ displayValue(job.source) }}</td>
+-              <td class="text-end">
+-                <button
+-                  class="btn btn-sm btn-outline-primary"
+-                  type="button"
+-                  [disabled]="matchingStore.isLocked()"
+-                  [attr.data-testid]="'add-to-matching-' + job.id"
+-                  (click)="addToMatchingSession(job)"
+-                >
+-                  Add to session
+-                </button>
+-              </td>
+-            </tr>
+-          }
+-        </tbody>
+-      </table>
+-    </div>
++    <ul class="job-grid" role="list" aria-label="Normalized job listings">
++      @for (job of jobs(); track job.id) {
++        <li>
++          <app-job-card
++            [jobId]="job.id"
++            [title]="job.title"
++            [company]="job.company"
++            [location]="job.location"
++            [postingDate]="job.postingDate"
++            [source]="job.source"
++            [inSession]="inSession(job.id)"
++          >
++            <button
++              class="btn btn-sm btn-outline-primary"
++              type="button"
++              [disabled]="matchingStore.isLocked() || inSession(job.id)"
++              [attr.data-testid]="'add-to-matching-' + job.id"
++              (click)="addToMatchingSession(job)"
++            >
++              {{ inSession(job.id) ? 'In session' : 'Add to session' }}
++            </button>
++          </app-job-card>
++        </li>
++      }
++    </ul>
+   }
+ </section>
+diff --git a/src/app/pages/normalized-jobs/normalized-jobs.scss b/src/app/pages/normalized-jobs/normalized-jobs.scss
+index 0ca9311..047ae1f 100644
+--- a/src/app/pages/normalized-jobs/normalized-jobs.scss
++++ b/src/app/pages/normalized-jobs/normalized-jobs.scss
+@@ -63,7 +63,3 @@
+   justify-content: space-between;
+   align-items: center;
+ }
+-
+-table {
+-  min-width: 48rem;
+-}
+diff --git a/src/app/pages/normalized-jobs/normalized-jobs.spec.ts b/src/app/pages/normalized-jobs/normalized-jobs.spec.ts
+index 1688588..db1ffab 100644
+--- a/src/app/pages/normalized-jobs/normalized-jobs.spec.ts
++++ b/src/app/pages/normalized-jobs/normalized-jobs.spec.ts
+@@ -123,12 +123,25 @@ describe('NormalizedJobs', () => {
+     expect(router.navigate).not.toHaveBeenCalled();
+   });
+ 
++  it('marks a job as in session after it is added and prevents adding it twice', () => {
++    render();
++    const selector = '[data-testid="add-to-matching-job-1"]';
++    root().querySelector<HTMLButtonElement>(selector)!.click();
++    fixture.detectChanges();
++
++    const button = root().querySelector<HTMLButtonElement>(selector)!;
++    expect(button.disabled).toBe(true);
++    expect(button.textContent).toContain('In session');
++    expect(root().querySelector('.job-card--in-session .job-card__title')!.textContent).toContain('Senior Engineer');
++    expect(root().querySelectorAll('.job-card--in-session')).toHaveLength(1);
++  });
++
+   it('loads the default page and renders each job field in service order', () => {
+     render();
+ 
+     expect(api.listNormalizedJobs).toHaveBeenCalledWith({ page: 1, limit: 20 });
+-    const rows = root().querySelectorAll<HTMLTableRowElement>('tbody tr');
+-    expect(Array.from(rows).map((row) => row.cells[0].textContent.trim())).toEqual([
++    const rows = root().querySelectorAll<HTMLElement>('.job-card');
++    expect(Array.from(rows).map((row) => row.querySelector('.job-card__title')!.textContent!.trim())).toEqual([
+       'Senior Engineer',
+       '—',
+     ]);
+@@ -222,7 +235,7 @@ describe('NormalizedJobs', () => {
+     fixture.detectChanges();
+ 
+     expect(api.listNormalizedJobs).toHaveBeenCalledTimes(2);
+-    expect(fixture.nativeElement.querySelectorAll('tbody tr')).toHaveLength(2);
++    expect(fixture.nativeElement.querySelectorAll('.job-card')).toHaveLength(2);
+   });
+ 
+   it('does not present results from a superseded request', () => {
+@@ -270,6 +283,6 @@ describe('NormalizedJobs', () => {
+     expect(fixture.nativeElement.textContent).toContain(
+       'The service returned a job without a valid identifier.',
+     );
+-    expect(fixture.nativeElement.querySelectorAll('tbody tr')).toHaveLength(0);
++    expect(fixture.nativeElement.querySelectorAll('.job-card')).toHaveLength(0);
+   });
+ });
+diff --git a/src/app/pages/normalized-jobs/normalized-jobs.ts b/src/app/pages/normalized-jobs/normalized-jobs.ts
+index a00320f..63f91ca 100644
+--- a/src/app/pages/normalized-jobs/normalized-jobs.ts
++++ b/src/app/pages/normalized-jobs/normalized-jobs.ts
+@@ -4,6 +4,7 @@ import { ActivatedRoute, ParamMap, Params, Router, RouterLink } from '@angular/r
+ import { EMPTY, Subject, catchError, combineLatest, startWith, switchMap, tap } from 'rxjs';
+ import { distinctUntilChanged, map } from 'rxjs/operators';
+ import { TipApi } from '../../core/api/tip-api';
++import { JobCard } from '../../shared/job-card/job-card';
+ import { MatchingStore } from '../../core/state/matching-store';
+ import {
+   NormalizedJob,
+@@ -100,7 +101,7 @@ function queriesEqual(left: ListingQuery, right: ListingQuery): boolean {
+ }
+ 
+ @Component({
+-  imports: [RouterLink],
++  imports: [RouterLink, JobCard],
+   selector: 'app-normalized-jobs',
+   templateUrl: './normalized-jobs.html',
+   styleUrl: './normalized-jobs.scss',
+@@ -202,8 +203,8 @@ export class NormalizedJobs {
+       .subscribe();
+   }
+ 
+-  protected displayValue(value: string | null): string {
+-    return value?.trim() || '—';
++  protected inSession(jobId: string): boolean {
++    return this.matchingStore.selectedJobIds().has(jobId);
+   }
+ 
+   protected retry(): void {
+diff --git a/src/app/shared/job-card/job-card.html b/src/app/shared/job-card/job-card.html
+new file mode 100644
+index 0000000..cf8bc0b
+--- /dev/null
++++ b/src/app/shared/job-card/job-card.html
+@@ -0,0 +1,43 @@
++<article class="job-card" [class.job-card--in-session]="inSession()" [attr.aria-labelledby]="'job-card-title-' + jobId()">
++  <header class="job-card__head">
++    <h2 class="job-card__title" [id]="'job-card-title-' + jobId()">
++      <a [routerLink]="['/normalized-jobs', jobId()]">{{ display(title()) }}</a>
++    </h2>
++    <p class="job-card__company">{{ display(company()) }}</p>
++    @if (inSession()) {
++      <span class="job-card__badge">In session</span>
++    }
++  </header>
++
++  <dl class="job-card__facts">
++    <div>
++      <dt>Location</dt>
++      <dd>{{ display(location()) }}</dd>
++    </div>
++    <div>
++      <dt>Posted</dt>
++      <dd>{{ date(postingDate()) }}</dd>
++    </div>
++    @if (extraLabel()) {
++      <div>
++        <dt>{{ extraLabel() }}</dt>
++        <dd>{{ date(extraValue()) }}</dd>
++      </div>
++    }
++  </dl>
++
++  <footer class="job-card__foot">
++    <span class="job-card__source">
++      @if (sourceLink(); as link) {
++        <a [href]="link.href" target="_blank" rel="noopener noreferrer">{{ link.label }}</a>
++      } @else if (sourceText(); as text) {
++        {{ text }}
++      } @else {
++        —
++      }
++    </span>
++    <div class="job-card__actions">
++      <ng-content />
++    </div>
++  </footer>
++</article>
+diff --git a/src/app/shared/job-card/job-card.scss b/src/app/shared/job-card/job-card.scss
+new file mode 100644
+index 0000000..71c5322
+--- /dev/null
++++ b/src/app/shared/job-card/job-card.scss
+@@ -0,0 +1,107 @@
++:host {
++  display: block;
++  height: 100%;
++}
++
++.job-card {
++  display: flex;
++  flex-direction: column;
++  gap: 0.85rem;
++  height: 100%;
++  padding: 1rem 1.1rem;
++  background: var(--tip-surface);
++  border: 1px solid var(--tip-border);
++  border-radius: 0.75rem;
++
++  &:hover,
++  &:focus-within {
++    border-color: var(--tip-blue);
++  }
++
++  // The left edge only appears when the job is part of the matching session.
++  &--in-session {
++    box-shadow: inset 0.25rem 0 0 var(--tip-coral);
++  }
++
++  &__head {
++    display: grid;
++    gap: 0.15rem;
++  }
++
++  &__title {
++    margin: 0;
++    font-size: 1.05rem;
++    font-weight: 700;
++    line-height: 1.3;
++    overflow-wrap: anywhere;
++
++    a {
++      color: var(--tip-navy);
++      text-decoration: none;
++
++      &:hover {
++        text-decoration: underline;
++      }
++    }
++  }
++
++  &__company {
++    margin: 0;
++    color: var(--tip-muted);
++  }
++
++  &__badge {
++    justify-self: start;
++    margin-top: 0.35rem;
++    padding: 0.1rem 0.5rem;
++    border-radius: 999px;
++    background: #fdeee9;
++    color: #9b3f27;
++    font-size: 0.8rem;
++    font-weight: 600;
++  }
++
++  &__facts {
++    display: grid;
++    grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
++    gap: 0.5rem 1rem;
++    margin: 0;
++
++    dt {
++      color: var(--tip-muted);
++      font-size: 0.8rem;
++      font-weight: 400;
++    }
++
++    dd {
++      margin: 0;
++      overflow-wrap: anywhere;
++    }
++  }
++
++  &__foot {
++    display: flex;
++    flex-wrap: wrap;
++    align-items: center;
++    justify-content: space-between;
++    gap: 0.5rem 0.75rem;
++    margin-top: auto;
++    padding-top: 0.75rem;
++    border-top: 1px solid var(--tip-border);
++  }
++
++  &__source {
++    min-width: 0;
++    color: var(--tip-muted);
++    font-size: 0.9rem;
++    overflow-wrap: anywhere;
++  }
++
++  &__actions {
++    display: flex;
++    flex-wrap: wrap;
++    align-items: center;
++    justify-content: flex-end;
++    gap: 0.35rem;
++  }
++}
+diff --git a/src/app/shared/job-card/job-card.spec.ts b/src/app/shared/job-card/job-card.spec.ts
+new file mode 100644
+index 0000000..27120d1
+--- /dev/null
++++ b/src/app/shared/job-card/job-card.spec.ts
+@@ -0,0 +1,107 @@
++import { Component } from '@angular/core';
++import { TestBed } from '@angular/core/testing';
++import { provideRouter } from '@angular/router';
++import { describe, expect, it } from 'vitest';
++import { JobCard } from './job-card';
++
++@Component({
++  imports: [JobCard],
++  template: `
++    <app-job-card
++      [jobId]="'job-1'"
++      [title]="title"
++      [company]="company"
++      [location]="location"
++      [postingDate]="postingDate"
++      [source]="source"
++      [extraLabel]="extraLabel"
++      [extraValue]="extraValue"
++      [inSession]="inSession"
++    >
++      <button type="button" class="projected">Action</button>
++    </app-job-card>
++  `,
++})
++class Host {
++  title: string | null = 'Senior Engineer';
++  company: string | null = 'Northwind';
++  location: string | null = 'Remote';
++  postingDate: string | null = '2026-10-13';
++  source: string | null = 'https://www.example.com/jobs/1';
++  extraLabel: string | null = null;
++  extraValue: string | null = null;
++  inSession = false;
++}
++
++function render(configure: (host: Host) => void = () => undefined) {
++  TestBed.configureTestingModule({ imports: [Host], providers: [provideRouter([])] });
++  const fixture = TestBed.createComponent(Host);
++  configure(fixture.componentInstance);
++  fixture.detectChanges();
++  return fixture.nativeElement as HTMLElement;
++}
++
++describe('JobCard', () => {
++  it('shows title link, company, facts and projected actions', () => {
++    const root = render();
++    const link = root.querySelector<HTMLAnchorElement>('.job-card__title a')!;
++    expect(link.textContent!.trim()).toBe('Senior Engineer');
++    expect(link.getAttribute('href')).toBe('/normalized-jobs/job-1');
++    expect(root.querySelector('.job-card__company')!.textContent).toContain('Northwind');
++    expect(root.querySelector('.job-card__facts')!.textContent).toContain('Remote');
++    expect(root.querySelector('.job-card__facts')!.textContent).toContain('2026-10-13');
++    expect(root.querySelector('.job-card__actions .projected')).toBeTruthy();
++  });
++
++  it('uses a dash for missing values', () => {
++    const root = render((host) => {
++      host.title = null;
++      host.company = '  ';
++      host.location = null;
++      host.postingDate = null;
++      host.source = null;
++    });
++    expect(root.querySelector('.job-card__title a')!.textContent!.trim()).toBe('—');
++    expect(root.querySelector('.job-card__company')!.textContent!.trim()).toBe('—');
++    expect(root.querySelector('.job-card__source')!.textContent!.trim()).toBe('—');
++  });
++
++  it('links URL sources by hostname and prints other sources as text', () => {
++    const withUrl = render();
++    const link = withUrl.querySelector<HTMLAnchorElement>('.job-card__source a')!;
++    expect(link.textContent!.trim()).toBe('example.com');
++    expect(link.getAttribute('href')).toBe('https://www.example.com/jobs/1');
++    expect(link.getAttribute('rel')).toContain('noopener');
++
++    TestBed.resetTestingModule();
++    const withName = render((host) => (host.source = 'Acme'));
++    expect(withName.querySelector('.job-card__source a')).toBeNull();
++    expect(withName.querySelector('.job-card__source')!.textContent!.trim()).toBe('Acme');
++
++    TestBed.resetTestingModule();
++    const unsafe = render((host) => (host.source = 'javascript:alert(1)'));
++    expect(unsafe.querySelector('.job-card__source a')).toBeNull();
++  });
++
++  it('shows an extra fact with a date-only value', () => {
++    const root = render((host) => {
++      host.extraLabel = 'Interested on';
++      host.extraValue = '2026-10-12T10:30:00Z';
++    });
++    const text = root.querySelector('.job-card__facts')!.textContent!;
++    expect(text).toContain('Interested on');
++    expect(text).toContain('2026-10-12');
++    expect(text).not.toContain('10:30');
++  });
++
++  it('marks jobs that are already in the matching session', () => {
++    const idle = render();
++    expect(idle.querySelector('.job-card--in-session')).toBeNull();
++    expect(idle.querySelector('.job-card__badge')).toBeNull();
++
++    TestBed.resetTestingModule();
++    const selected = render((host) => (host.inSession = true));
++    expect(selected.querySelector('.job-card--in-session')).toBeTruthy();
++    expect(selected.querySelector('.job-card__badge')!.textContent).toContain('In session');
++  });
++});
+diff --git a/src/app/shared/job-card/job-card.ts b/src/app/shared/job-card/job-card.ts
+new file mode 100644
+index 0000000..5805e08
+--- /dev/null
++++ b/src/app/shared/job-card/job-card.ts
+@@ -0,0 +1,50 @@
++import { Component, computed, input } from '@angular/core';
++import { RouterLink } from '@angular/router';
++
++/**
++ * Compact card for a normalized job. Used by Normalized jobs and Interests.
++ * Page-specific buttons are projected into the footer.
++ */
++@Component({
++  selector: 'app-job-card',
++  imports: [RouterLink],
++  templateUrl: './job-card.html',
++  styleUrl: './job-card.scss',
++})
++export class JobCard {
++  readonly jobId = input.required<string>();
++  readonly title = input<string | null>(null);
++  readonly company = input<string | null>(null);
++  readonly location = input<string | null>(null);
++  readonly postingDate = input<string | null>(null);
++  readonly source = input<string | null>(null);
++  /** Optional extra fact, e.g. the date the job was added to interests. */
++  readonly extraLabel = input<string | null>(null);
++  readonly extraValue = input<string | null>(null);
++  /** True when the job is already part of the open matching session. */
++  readonly inSession = input(false);
++
++  protected readonly sourceLink = computed(() => {
++    const value = this.source()?.trim();
++    if (!value) return null;
++    try {
++      const url = new URL(value);
++      if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
++      return { href: url.href, label: url.hostname.replace(/^www\./, '') };
++    } catch {
++      return null;
++    }
++  });
++
++  protected readonly sourceText = computed(() => this.source()?.trim() || null);
++
++  protected display(value: string | null): string {
++    return value?.trim() || '—';
++  }
++
++  protected date(value: string | null): string {
++    const text = value?.trim();
++    if (!text) return '—';
++    return /^\d{4}-\d{2}-\d{2}T/.test(text) ? text.slice(0, 10) : text;
++  }
++}
+diff --git a/src/styles.scss b/src/styles.scss
+index 06db2ce..7240c1a 100644
+--- a/src/styles.scss
++++ b/src/styles.scss
+@@ -30,3 +30,13 @@ button,
+ input {
+ 	font: inherit;
+ }
++
++// Responsive grid shared by the job list pages (Normalized jobs, Interests).
++.job-grid {
++	display: grid;
++	grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
++	gap: 1rem;
++	margin: 0;
++	padding: 0;
++	list-style: none;
++}

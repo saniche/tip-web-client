@@ -123,12 +123,25 @@ describe('NormalizedJobs', () => {
     expect(router.navigate).not.toHaveBeenCalled();
   });
 
+  it('marks a job as in session after it is added and prevents adding it twice', () => {
+    render();
+    const selector = '[data-testid="add-to-matching-job-1"]';
+    root().querySelector<HTMLButtonElement>(selector)!.click();
+    fixture.detectChanges();
+
+    const button = root().querySelector<HTMLButtonElement>(selector)!;
+    expect(button.disabled).toBe(true);
+    expect(button.textContent).toContain('In session');
+    expect(root().querySelector('.job-card--in-session .job-card__title')!.textContent).toContain('Senior Engineer');
+    expect(root().querySelectorAll('.job-card--in-session')).toHaveLength(1);
+  });
+
   it('loads the default page and renders each job field in service order', () => {
     render();
 
     expect(api.listNormalizedJobs).toHaveBeenCalledWith({ page: 1, limit: 20 });
-    const rows = root().querySelectorAll<HTMLTableRowElement>('tbody tr');
-    expect(Array.from(rows).map((row) => row.cells[0].textContent.trim())).toEqual([
+    const rows = root().querySelectorAll<HTMLElement>('.job-card');
+    expect(Array.from(rows).map((row) => row.querySelector('.job-card__title')!.textContent!.trim())).toEqual([
       'Senior Engineer',
       '—',
     ]);
@@ -222,7 +235,7 @@ describe('NormalizedJobs', () => {
     fixture.detectChanges();
 
     expect(api.listNormalizedJobs).toHaveBeenCalledTimes(2);
-    expect(fixture.nativeElement.querySelectorAll('tbody tr')).toHaveLength(2);
+    expect(fixture.nativeElement.querySelectorAll('.job-card')).toHaveLength(2);
   });
 
   it('does not present results from a superseded request', () => {
@@ -270,6 +283,6 @@ describe('NormalizedJobs', () => {
     expect(fixture.nativeElement.textContent).toContain(
       'The service returned a job without a valid identifier.',
     );
-    expect(fixture.nativeElement.querySelectorAll('tbody tr')).toHaveLength(0);
+    expect(fixture.nativeElement.querySelectorAll('.job-card')).toHaveLength(0);
   });
 });

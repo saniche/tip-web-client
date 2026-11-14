@@ -44,4 +44,25 @@ describe('navigation disclosures', () => {
     fixture.detectChanges();
     expect(menu.getAttribute('aria-expanded')).toBe('false');
   });
+
+  it('closes an open area when the user clicks outside the navigation', () => {
+    TestBed.configureTestingModule({ imports: [PrimaryNavigation], providers: [provideRouter([])] });
+    const fixture = TestBed.createComponent(PrimaryNavigation);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    document.body.appendChild(root);
+    const profile = root.querySelector<HTMLButtonElement>('[data-area="profile"] button')!;
+    profile.click();
+    fixture.detectChanges();
+    expect(profile.getAttribute('aria-expanded')).toBe('true');
+
+    root.querySelector<HTMLElement>('#navigation-profile')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+    expect(profile.getAttribute('aria-expanded')).toBe('true');
+
+    document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+    expect(profile.getAttribute('aria-expanded')).toBe('false');
+    root.remove();
+  });
 });
