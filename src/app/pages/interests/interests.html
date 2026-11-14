@@ -131,7 +131,7 @@
               [attr.data-testid]="'add-to-matching-' + interest.id"
               (click)="addToMatchingSession(interest)"
             >
-              {{ inSession(interest.job.id) ? 'In session' : 'Add to session' }}
+              {{ inSession(interest.job.id) ? 'In matching' : 'Add to matching' }}
             </button>
             @if (pendingRemovalId() === interest.id) {
               <span class="spinner-border spinner-border-sm text-secondary" role="status" aria-hidden="true"></span>

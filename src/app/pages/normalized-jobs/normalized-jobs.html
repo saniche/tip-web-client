@@ -172,7 +172,7 @@
               [attr.data-testid]="'add-to-matching-' + job.id"
               (click)="addToMatchingSession(job)"
             >
-              {{ inSession(job.id) ? 'In session' : 'Add to session' }}
+              {{ inSession(job.id) ? 'In matching' : 'Add to matching' }}
             </button>
           </app-job-card>
         </li>
