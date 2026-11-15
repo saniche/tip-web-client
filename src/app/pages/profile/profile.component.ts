@@ -31,6 +31,11 @@ export class ProfileComponent implements OnInit {
   protected readonly mergeEnabled = signal(true);
   protected readonly isPreparingMerge = signal(false);
   protected readonly uploadPreparationError = signal<string | null>(null);
+  protected readonly importLanguage = signal('English');
+  protected readonly importLanguages = [
+    'English', 'French', 'Spanish', 'Mandarin Chinese', 'Hindi', 'Arabic',
+    'Portuguese', 'Bengali', 'Russian', 'Japanese', 'German',
+  ];
 
   protected readonly editable = computed<EditableProfile | null>(() => {
     const profile = this.profile();
@@ -64,26 +69,31 @@ export class ProfileComponent implements OnInit {
   protected onFilesSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     const files = input.files ? Array.from(input.files) : [];
+    const outputLanguage = this.importLanguage();
     this.selectedFileNames.set(files.map((file) => file.name));
 
     if (files.length > 0 && this.mergeEnabled()) {
       this.uploadPreparationError.set(null);
       this.isPreparingMerge.set(true);
       void mergeProfileFiles(files)
-        .then((mergedFile) => this.profileStore.uploadFiles([mergedFile]))
+        .then((mergedFile) => this.profileStore.uploadFiles([mergedFile], outputLanguage))
         .catch((error: unknown) => {
           this.uploadPreparationError.set(errorMessage(error));
         })
         .finally(() => this.isPreparingMerge.set(false));
     } else if (files.length > 0) {
       this.uploadPreparationError.set(null);
-      this.profileStore.uploadFiles(files);
+      this.profileStore.uploadFiles(files, outputLanguage);
     }
     input.value = '';
   }
 
   protected onMergeToggle(event: Event): void {
     this.mergeEnabled.set((event.target as HTMLInputElement).checked);
+  }
+
+  protected onImportLanguageChange(event: Event): void {
+    this.importLanguage.set((event.target as HTMLSelectElement).value);
   }
 }
 

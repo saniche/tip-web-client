@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { TipApi } from '../api/tip-api';
 import { ProfileSession, UserProfile } from '../models/profile.models';
 import { PROFILE_POLLING_TIMEOUT_MS, ProfileStore } from './profile-store';
@@ -53,7 +53,7 @@ describe('ProfileStore', () => {
         ),
       );
 
-    store.uploadFiles([new File(['resume'], 'resume.md')]);
+    store.uploadFiles([new File(['resume'], 'resume.md')], 'English');
 
     expect(api.getProfile).not.toHaveBeenCalled();
     expect(store.session()?.files[1].status).toBe('processing');
@@ -71,7 +71,7 @@ describe('ProfileStore', () => {
       .mockReturnValueOnce(of(makeSession([], 'completed')))
       .mockReturnValueOnce(of(makeSession([{ id: '1', status: 'completed' }], 'processing')));
 
-    store.uploadFiles([new File(['resume'], 'resume.md')]);
+    store.uploadFiles([new File(['resume'], 'resume.md')], 'English');
 
     expect(api.getProfile).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(2000);
@@ -81,7 +81,7 @@ describe('ProfileStore', () => {
   it('stops after 15 minutes and informs the user that processing may continue', async () => {
     api.getProfileSession.mockReturnValue(of(makeSession([{ id: '1', status: 'processing' }], 'completed')));
 
-    store.uploadFiles([new File(['resume'], 'resume.md')]);
+    store.uploadFiles([new File(['resume'], 'resume.md')], 'English');
     await vi.advanceTimersByTimeAsync(PROFILE_POLLING_TIMEOUT_MS);
 
     expect(store.processingNotice()).toContain('Processing may still be ongoing');
@@ -91,6 +91,27 @@ describe('ProfileStore', () => {
     const callsAtTimeout = api.getProfileSession.mock.calls.length;
     await vi.advanceTimersByTimeAsync(4000);
     expect(api.getProfileSession).toHaveBeenCalledTimes(callsAtTimeout);
+  });
+
+  it('creates one session with the selected language and uploads all files to it', () => {
+    api.getProfileSession.mockReturnValue(of(makeSession([{ id: '1', status: 'processing' }])));
+    const files = [new File(['one'], 'one.md'), new File(['two'], 'two.pdf')];
+
+    store.uploadFiles(files, 'French');
+
+    expect(api.createProfileSession).toHaveBeenCalledWith('French');
+    expect(api.uploadProfileFile).toHaveBeenNthCalledWith(1, 'session-1', files[0]);
+    expect(api.uploadProfileFile).toHaveBeenNthCalledWith(2, 'session-1', files[1]);
+  });
+
+  it('reports a session creation failure without uploading files', () => {
+    api.createProfileSession.mockReturnValue(throwError(() => new Error('Unsupported language')));
+
+    store.uploadFiles([new File(['resume'], 'resume.md')], 'French');
+
+    expect(api.uploadProfileFile).not.toHaveBeenCalled();
+    expect(store.error()).toBe('Unsupported language');
+    expect(store.isUploading()).toBe(false);
   });
 });
 

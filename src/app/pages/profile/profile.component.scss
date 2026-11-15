@@ -56,6 +56,17 @@
   margin: 1rem 0 0;
 }
 
+.profile-import-language {
+  display: block;
+  max-width: 20rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.profile-import-language select {
+  margin-top: 0.35rem;
+}
+
 .profile-merge-toggle {
   display: flex;
   align-items: center;

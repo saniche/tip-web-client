@@ -60,6 +60,12 @@ describe('Profile', () => {
 
   it('enables merging by default and uploads one merged Markdown file', async () => {
     await createFixture();
+    const language: HTMLSelectElement = fixture.nativeElement.querySelector('.profile-import-language select');
+    expect(language.value).toBe('English');
+    expect(Array.from(language.options, (option) => option.value)).toEqual([
+      'English', 'French', 'Spanish', 'Mandarin Chinese', 'Hindi', 'Arabic',
+      'Portuguese', 'Bengali', 'Russian', 'Japanese', 'German',
+    ]);
     const mergeToggle: HTMLInputElement = fixture.nativeElement.querySelector(
       '.profile-merge-toggle input',
     );
@@ -72,6 +78,7 @@ describe('Profile', () => {
     await vi.waitFor(() => expect(store.uploadFiles).toHaveBeenCalledOnce());
     expect(store.uploadFiles).toHaveBeenCalledOnce();
     const uploadFiles = store.uploadFiles.mock.calls[0][0] as File[];
+    expect(store.uploadFiles.mock.calls[0][1]).toBe('English');
     expect(uploadFiles).toHaveLength(1);
     expect(uploadFiles[0].name).toBe('merged-profile.md');
     expect(await uploadFiles[0].text()).toContain('## resume.md\n\nResume content');
@@ -79,6 +86,7 @@ describe('Profile', () => {
 
   it('uploads originals separately when merge is disabled', async () => {
     await createFixture();
+    selectLanguage('French');
     const mergeToggle: HTMLInputElement = fixture.nativeElement.querySelector(
       '.profile-merge-toggle input',
     );
@@ -90,7 +98,32 @@ describe('Profile', () => {
     selectFiles(files);
 
     expect(store.uploadFiles).toHaveBeenCalledOnce();
-    expect(store.uploadFiles).toHaveBeenCalledWith(files);
+    expect(store.uploadFiles).toHaveBeenCalledWith(files, 'French');
+  });
+
+  it('captures the language before asynchronous merge and disables the selector while preparing', async () => {
+    await createFixture();
+    selectLanguage('French');
+    let resolveText!: (value: string) => void;
+    const text = new Promise<string>((resolve) => { resolveText = resolve; });
+    const markdown = new File(['placeholder'], 'resume.md');
+    Object.defineProperty(markdown, 'text', { value: () => text });
+    selectFiles([markdown]);
+
+    const language: HTMLSelectElement = fixture.nativeElement.querySelector('.profile-import-language select');
+    expect(language.disabled).toBe(true);
+    selectLanguage('Spanish');
+    resolveText('Resume content');
+    await vi.waitFor(() => expect(store.uploadFiles).toHaveBeenCalledOnce());
+    expect(store.uploadFiles.mock.calls[0][1]).toBe('French');
+  });
+
+  it('disables the import language selector during upload', async () => {
+    await createFixture();
+    store.isUploading.set(true);
+    fixture.detectChanges();
+    const language = fixture.nativeElement.querySelector('.profile-import-language select') as HTMLSelectElement;
+    expect(language.disabled).toBe(true);
   });
 
   it('does not upload any file when merged extraction fails', async () => {
@@ -124,6 +157,7 @@ describe('Profile', () => {
       },
     });
     await createFixture();
+    selectLanguage('French');
     const labelInput = fixture.nativeElement.querySelector(
       'input[formControlName="label"]',
     ) as HTMLInputElement;
@@ -304,6 +338,13 @@ describe('Profile', () => {
     const fileInput: HTMLInputElement = fixture.nativeElement.querySelector('input[type="file"]');
     Object.defineProperty(fileInput, 'files', { configurable: true, value: files });
     fileInput.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+  }
+
+  function selectLanguage(value: string): void {
+    const select: HTMLSelectElement = fixture.nativeElement.querySelector('.profile-import-language select');
+    select.value = value;
+    select.dispatchEvent(new Event('change'));
     fixture.detectChanges();
   }
 });

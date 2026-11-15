@@ -45,6 +45,15 @@
               [disabled]="isPreparingMerge() || isUploading()" (change)="onFilesSelected($event)" />
           </label>
         </div>
+        <label class="profile-import-language">
+          Output language for imported files
+          <select class="form-select" [value]="importLanguage()"
+            [disabled]="isPreparingMerge() || isUploading()" (change)="onImportLanguageChange($event)">
+            @for (language of importLanguages; track language) {
+              <option [value]="language">{{ language }}</option>
+            }
+          </select>
+        </label>
         <label class="profile-merge-toggle">
           <input type="checkbox" [checked]="mergeEnabled()"
             [disabled]="isPreparingMerge() || isUploading()" (change)="onMergeToggle($event)" />

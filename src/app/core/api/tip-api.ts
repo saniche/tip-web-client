@@ -214,8 +214,10 @@ export class TipApi {
     return this.http.patch<UserProfile>(`${this.baseUrl}/profile/${encodeURIComponent(id)}`, { data, label, output_language });
   }
 
-  createProfileSession(): Observable<ProfileSession> {
-    return this.http.post<ProfileSession>(`${this.baseUrl}/profile/sessions`, {});
+  createProfileSession(outputLanguage: string): Observable<ProfileSession> {
+    return this.http.post<ProfileSession>(`${this.baseUrl}/profile/sessions`, {
+      output_language: outputLanguage,
+    });
   }
 
   uploadProfileFile(sessionId: string, file: File): Observable<unknown> {
