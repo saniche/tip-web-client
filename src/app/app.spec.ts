@@ -61,9 +61,8 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should render the shell navigation', async () => {
+  it('should render the shell navigation', () => {
     const fixture = TestBed.createComponent(App);
-    await fixture.whenStable();
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;

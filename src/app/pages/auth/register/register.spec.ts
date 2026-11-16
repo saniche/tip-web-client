@@ -29,7 +29,7 @@ describe('Register', () => {
 
     fixture = TestBed.createComponent(Register);
     component = fixture.componentInstance;
-    await fixture.whenStable();
+    fixture.detectChanges();
   });
 
   it('should create', () => {

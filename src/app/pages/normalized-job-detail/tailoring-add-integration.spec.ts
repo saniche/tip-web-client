@@ -10,10 +10,6 @@ import { TailoredCvStore } from '../../core/state/tailored-cv-store';
 import { TailoredCvSetup } from '../tailored-cvs/tailored-cv-setup/tailored-cv-setup';
 import { NormalizedJobDetail } from './normalized-job-detail';
 
-vi.mock('ngx-sonner', () => ({
-  toast: { success: vi.fn(), info: vi.fn(), warning: vi.fn(), error: vi.fn() },
-}));
-
 describe('Adding a tailoring job in place', () => {
   afterEach(() => {
     TestBed.resetTestingModule();

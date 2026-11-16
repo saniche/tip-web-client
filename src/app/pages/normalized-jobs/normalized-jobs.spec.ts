@@ -131,7 +131,7 @@ describe('NormalizedJobs', () => {
 
     const button = root().querySelector<HTMLButtonElement>(selector)!;
     expect(button.disabled).toBe(true);
-    expect(button.textContent).toContain('In session');
+    expect(button.textContent).toContain('In matching');
     expect(root().querySelector('.job-card--in-session .job-card__title')!.textContent).toContain('Senior Engineer');
     expect(root().querySelectorAll('.job-card--in-session')).toHaveLength(1);
   });
