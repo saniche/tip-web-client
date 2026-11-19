@@ -26,7 +26,6 @@ const KNOWN_KEYS = new Set([
   'linkedin',
   'summary',
   'total_years_of_experience',
-  'source',
   'skills',
   'work_experiences',
   'education',
