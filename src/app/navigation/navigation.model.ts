@@ -24,7 +24,7 @@ export const navigationAreas: readonly NavigationArea[] = [
   { id: 'dashboard', label: 'Dashboard', icon: 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z', availability: 'available',
     destinations: [{ label: 'Overview', path: '/dashboard' }] },
   { id: 'profile', label: 'My Profile', icon: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M4 21a8 8 0 0 1 16 0', availability: 'available',
-    destinations: [{ label: 'Profile', path: '/profile' }] },
+    destinations: [{ label: 'Current profile', path: '/profile' }, { label: 'All profiles', path: '/profiles' }] },
   { id: 'jobs', label: 'Jobs', icon: 'M3 7h18v13H3z M8 7V4h8v3 M3 12h18', availability: 'available',
     destinations: [{ label: 'Normalized jobs', path: '/normalized-jobs' }, { label: 'Normalize job', path: '/normalize-job' }, { label: 'Interests', path: '/jobs/interests' }] },
   { id: 'matching', label: 'Job Matching', icon: 'M4 5h16 M4 12h10 M4 19h16 M17 10l2 2 3-4', availability: 'available',

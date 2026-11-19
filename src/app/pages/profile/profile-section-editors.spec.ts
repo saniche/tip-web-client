@@ -7,51 +7,85 @@ import { SkillsComponent } from './skills/skills.component';
 import { WorkExperiencesComponent } from './work-experiences/work-experiences.component';
 
 describe('profile section editors', () => {
-  it('adds, edits, and removes skills while emitting nullable values', async () => {
+  it('adds skills from the quick-add bar and ignores empty or duplicate names', async () => {
     const fixture = await createFixture(SkillsComponent);
     const emitted: unknown[][] = [];
     fixture.componentInstance.skillsChange.subscribe((value) => emitted.push(value));
+    const root = fixture.nativeElement as HTMLElement;
+    const nameInput = root.querySelector<HTMLInputElement>('input[aria-label="New skill name"]')!;
+    const levelSelect = root.querySelector<HTMLSelectElement>('select[aria-label="New skill level"]')!;
 
-    click(fixture, 'button');
-    expect(emitted.at(-1)).toEqual([{ name: null, level: null }]);
+    click(fixture, 'button.btn-outline-primary');
+    expect(emitted).toHaveLength(0);
+
+    nameInput.value = ' TypeScript ';
+    levelSelect.value = 'Expert';
+    nameInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }));
+    expect(emitted.at(-1)).toEqual([{ name: 'TypeScript', level: 'Expert' }]);
+    expect(nameInput.value).toBe('');
 
     fixture.componentRef.setInput('skills', emitted.at(-1));
     fixture.detectChanges();
-    const name = fixture.nativeElement.querySelector('input') as HTMLInputElement;
-    name.value = 'TypeScript';
-    name.dispatchEvent(new Event('input'));
-    expect(emitted.at(-1)).toEqual([{ name: 'TypeScript', level: null }]);
+    nameInput.value = 'typescript';
+    click(fixture, 'button.btn-outline-primary');
+    expect(emitted).toHaveLength(1);
+    expect(root.querySelector('.skills__edit')).toBeTruthy();
+  });
 
-    fixture.componentRef.setInput('skills', emitted.at(-1));
+  it('groups skills by level from highest to lowest, including legacy PascalCase fields', async () => {
+    const fixture = await createFixture(SkillsComponent);
+    fixture.componentRef.setInput('skills', [
+      { name: 'SQL' },
+      { name: 'TypeScript', level: 'Expert' },
+      { Name: 'Angular', Level: 'Advanced' },
+    ]);
     fixture.detectChanges();
-    const level = fixture.nativeElement.querySelector('select') as HTMLSelectElement;
+
+    const groups = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.skills__group'),
+    ).map((group) => ({
+      level: group.querySelector('.skills__level')!.childNodes[0].textContent!.trim(),
+      chips: Array.from(group.querySelectorAll('.skills__chip')).map((chip) => chip.textContent!.trim()),
+    }));
+    expect(groups).toEqual([
+      { level: 'Expert', chips: ['TypeScript'] },
+      { level: 'Advanced', chips: ['Angular'] },
+      { level: 'No level', chips: ['SQL'] },
+    ]);
+  });
+
+  it('edits a selected skill, emits nullable values, and removes it', async () => {
+    const fixture = await createFixture(SkillsComponent);
+    const emitted: unknown[][] = [];
+    fixture.componentInstance.skillsChange.subscribe((value) => emitted.push(value));
+    const root = fixture.nativeElement as HTMLElement;
+    fixture.componentRef.setInput('skills', [{ name: 'TypeScript', level: null }]);
+    fixture.detectChanges();
+    expect(root.querySelector('.skills__edit')).toBeNull();
+
+    click(fixture, '.skills__chip');
+    const name = root.querySelector<HTMLInputElement>('.skills__edit input')!;
+    expect(name.value).toBe('TypeScript');
+
+    const level = root.querySelector<HTMLSelectElement>('.skills__edit select')!;
     level.value = 'Beginner';
     level.dispatchEvent(new Event('change'));
     expect(emitted.at(-1)).toEqual([{ name: 'TypeScript', level: 'Beginner' }]);
 
     fixture.componentRef.setInput('skills', emitted.at(-1));
     fixture.detectChanges();
-    const clearedName = fixture.nativeElement.querySelector('input') as HTMLInputElement;
-    clearedName.value = '';
-    clearedName.dispatchEvent(new Event('input'));
+    name.value = '';
+    name.dispatchEvent(new Event('input'));
     expect(emitted.at(-1)).toEqual([{ name: null, level: 'Beginner' }]);
 
     fixture.componentRef.setInput('skills', emitted.at(-1));
     fixture.detectChanges();
+    expect(root.querySelector('.skills__chip')!.textContent).toContain('Unnamed skill');
     click(fixture, 'button.btn-outline-danger');
     expect(emitted.at(-1)).toEqual([]);
-  });
-
-  it('shows existing skill levels from lowercase or legacy PascalCase profile fields', async () => {
-    const fixture = await createFixture(SkillsComponent);
-    fixture.componentRef.setInput('skills', [
-      { name: 'TypeScript', level: 'Expert' },
-      { Name: 'Angular', Level: 'Advanced' },
-    ]);
+    fixture.componentRef.setInput('skills', []);
     fixture.detectChanges();
-
-    const selects = fixture.nativeElement.querySelectorAll('select') as NodeListOf<HTMLSelectElement>;
-    expect(Array.from(selects).map((select) => select.value)).toEqual(['Expert', 'Advanced']);
+    expect(root.querySelector('.skills__edit')).toBeNull();
   });
 
   it('adds, edits, and removes certificates with nullable numeric years', async () => {
@@ -151,6 +185,50 @@ describe('profile section editors', () => {
     fixture.detectChanges();
     click(fixture, 'button.btn-outline-danger');
     expect(emitted.at(-1)).toEqual([]);
+  });
+
+  it('summarises experiences as collapsed rows and opens one at a time', async () => {
+    const fixture = await createFixture(WorkExperiencesComponent);
+    const root = fixture.nativeElement as HTMLElement;
+    fixture.componentRef.setInput('workExperiences', [
+      { Company: 'Acme', Title: 'Developer', StartDate: '2020-01-15', EndDate: '2022-06-30' },
+      { Company: 'Example', Title: null, StartDate: '2022-07-01', EndDate: null },
+    ]);
+    fixture.detectChanges();
+
+    const heads = Array.from(root.querySelectorAll<HTMLButtonElement>('.editor-item__head'));
+    expect(
+      heads.map((head) => Array.from(head.querySelectorAll('span')).map((span) => span.textContent!.trim())),
+    ).toEqual([
+      ['Developer at Acme', '2020-01 to 2022-06'],
+      ['Example', '2022-07 to present'],
+    ]);
+    const bodies = () => Array.from(root.querySelectorAll<HTMLElement>('.editor-item__body')).map((body) => body.hidden);
+    expect(bodies()).toEqual([true, true]);
+
+    heads[0].click();
+    fixture.detectChanges();
+    expect(bodies()).toEqual([false, true]);
+    expect(heads[0].getAttribute('aria-expanded')).toBe('true');
+
+    heads[1].click();
+    fixture.detectChanges();
+    expect(bodies()).toEqual([true, false]);
+
+    heads[1].click();
+    fixture.detectChanges();
+    expect(bodies()).toEqual([true, true]);
+  });
+
+  it('opens a newly added experience so it can be filled in', async () => {
+    const fixture = await createFixture(WorkExperiencesComponent);
+    const root = fixture.nativeElement as HTMLElement;
+    click(fixture, 'button');
+    fixture.componentRef.setInput('workExperiences', [{ Company: null, Title: null }]);
+    fixture.detectChanges();
+
+    expect(root.querySelector('.editor-item__head')!.textContent).toContain('New experience');
+    expect(root.querySelector<HTMLElement>('.editor-item__body')!.hidden).toBe(false);
   });
 });
 

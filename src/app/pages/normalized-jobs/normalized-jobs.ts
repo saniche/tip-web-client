@@ -4,6 +4,7 @@ import { ActivatedRoute, ParamMap, Params, Router, RouterLink } from '@angular/r
 import { EMPTY, Subject, catchError, combineLatest, startWith, switchMap, tap } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
 import { TipApi } from '../../core/api/tip-api';
+import { JobCard } from '../../shared/job-card/job-card';
 import { MatchingStore } from '../../core/state/matching-store';
 import {
   NormalizedJob,
@@ -100,7 +101,7 @@ function queriesEqual(left: ListingQuery, right: ListingQuery): boolean {
 }
 
 @Component({
-  imports: [RouterLink],
+  imports: [RouterLink, JobCard],
   selector: 'app-normalized-jobs',
   templateUrl: './normalized-jobs.html',
   styleUrl: './normalized-jobs.scss',
@@ -202,8 +203,8 @@ export class NormalizedJobs {
       .subscribe();
   }
 
-  protected displayValue(value: string | null): string {
-    return value?.trim() || '—';
+  protected inSession(jobId: string): boolean {
+    return this.matchingStore.selectedJobIds().has(jobId);
   }
 
   protected retry(): void {

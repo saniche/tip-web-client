@@ -186,6 +186,9 @@ export class MatchingStore {
 
   readonly session = computed(() => this.isOwnerCurrent() ? this.state().session : null);
   readonly summary = computed(() => this.isOwnerCurrent() ? this.state().summary : null);
+  readonly selectedJobIds = computed(
+    () => new Set(this.session()?.selectedJobs.map((job) => job.jobId) ?? []),
+  );
   readonly storageError = computed(() => this.state().storageError);
   readonly trackingWarning = computed(() => this.state().trackingWarning);
   readonly membershipCheckError = computed(() => this.state().membershipCheckError);

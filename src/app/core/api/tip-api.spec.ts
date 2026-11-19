@@ -395,12 +395,12 @@ describe('TipApi', () => {
     request.flush(null);
   });
 
-  it('updates a profile with data, label, and output language', () => {
+  it('updates a profile by encoded identifier with data, label, and output language', () => {
     const data = { name: 'Ada', skills: { languages: ['TypeScript'] } };
-    service.updateProfile(data, 'Default Label', 'English').subscribe();
+    service.updateProfile('profile/1', data, 'Default Label', 'English').subscribe();
 
-    const request = http.expectOne(`${environment.baseUrl}/profile`);
-    expect(request.request.method).toBe('PUT');
+    const request = http.expectOne(`${environment.baseUrl}/profile/profile%2F1`);
+    expect(request.request.method).toBe('PATCH');
     expect(request.request.body).toEqual({
       data,
       label: 'Default Label',
@@ -420,7 +420,7 @@ describe('TipApi', () => {
     service.updateProfileVersion('profile/1', data, 'Engineering', 'English').subscribe();
 
     const request = http.expectOne(`${environment.baseUrl}/profiles/profile%2F1`);
-    expect(request.request.method).toBe('PUT');
+    expect(request.request.method).toBe('PATCH');
     expect(request.request.body).toEqual({
       data,
       label: 'Engineering',

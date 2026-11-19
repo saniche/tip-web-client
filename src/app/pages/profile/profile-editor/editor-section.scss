@@ -1,0 +1,21 @@
+:host {
+  display: block;
+}
+
+.editor-section {
+  display: grid;
+  gap: 0.75rem;
+
+  &__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+  }
+
+  &__items {
+    display: grid;
+    gap: 0.5rem;
+  }
+}

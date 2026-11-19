@@ -231,7 +231,7 @@ describe('Interests Component', () => {
 
   it('requires confirmation before removing an interest', () => {
     render();
-    const removeBtn = fixture.nativeElement.querySelector('tbody tr button.btn-outline-danger') as HTMLButtonElement;
+    const removeBtn = fixture.nativeElement.querySelector('.job-card button.btn-outline-danger') as HTMLButtonElement;
     expect(removeBtn).toBeTruthy();
     expect(removeBtn.textContent?.trim()).toBe('Remove');
 
@@ -268,9 +268,9 @@ describe('Interests Component', () => {
     fixture.detectChanges();
 
     expect(api.removeInterest).toHaveBeenCalledTimes(1);
-    expect(fixture.nativeElement.querySelector('tbody tr .spinner-border')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.job-card .spinner-border')).toBeTruthy();
     const remainingRemoveButton = fixture.nativeElement.querySelector(
-      'tbody tr:nth-child(2) button.btn-outline-danger',
+      '.job-grid li:nth-child(2) button.btn-outline-danger',
     ) as HTMLButtonElement;
     expect(remainingRemoveButton.disabled).toBe(true);
 

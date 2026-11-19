@@ -1,9 +1,10 @@
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, ParamMap, Params, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, ParamMap, Params, Router } from '@angular/router';
 import { EMPTY, Subject, catchError, combineLatest, debounceTime, startWith, switchMap, tap } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
 import { TipApi } from '../../core/api/tip-api';
+import { JobCard } from '../../shared/job-card/job-card';
 import { MatchingStore } from '../../core/state/matching-store';
 import {
   JobInterest,
@@ -61,7 +62,7 @@ function filtersEqual(left: JobInterestFilters, right: JobInterestFilters): bool
 }
 
 @Component({
-  imports: [RouterLink],
+  imports: [JobCard],
   selector: 'app-interests',
   styleUrl: './interests.scss',
   templateUrl: './interests.html',
@@ -284,16 +285,7 @@ export class Interests {
       });
   }
 
-  protected displayValue(value: string | null | undefined): string {
-    return value?.trim() || '—';
-  }
-
-  protected formatSource(source: string): string {
-    try {
-      const parsed = new URL(source);
-      return parsed.hostname.replace(/^www\./, '');
-    } catch {
-      return source;
-    }
+  protected inSession(jobId: string): boolean {
+    return this.matchingStore.selectedJobIds().has(jobId);
   }
 }

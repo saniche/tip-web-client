@@ -58,7 +58,7 @@ export class ProfileStore {
     this.error.set(null);
     this.saveMessage.set(null);
     this.api
-      .updateProfile(data, label, outputLanguage)
+      .updateProfile(this.profile()?.id ?? '', data, label, outputLanguage)
       .pipe(finalize(() => this.isSaving.set(false)))
       .subscribe({
         next: (profile) => {
@@ -69,7 +69,7 @@ export class ProfileStore {
       });
   }
 
-  uploadFiles(files: File[]): void {
+  uploadFiles(files: File[], outputLanguage: string): void {
     this.stopPolling();
     this.isUploading.set(true);
     this.error.set(null);
@@ -78,7 +78,7 @@ export class ProfileStore {
     this.processingNotice.set(null);
 
     this.api
-      .createProfileSession()
+      .createProfileSession(outputLanguage)
       .pipe(
         switchMap((session) =>
           from(files).pipe(

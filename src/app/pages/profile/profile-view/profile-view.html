@@ -1,0 +1,164 @@
+<div class="profile-view">
+  @if (isEmpty()) {
+    <p class="text-body-secondary mb-0">No profile information is available.</p>
+  }
+
+  @if (contact().name || contact().details.length || contact().summary || contact().years) {
+    <section class="profile-view__block" aria-label="Contact and summary">
+      @if (contact().name) {
+        <h2 class="profile-view__name">{{ contact().name }}</h2>
+      }
+      @if (contact().details.length) {
+        <dl class="profile-view__facts">
+          @for (item of contact().details; track item.key) {
+            <div>
+              <dt>{{ item.key === 'linkedin' ? 'LinkedIn' : item.key }}</dt>
+              <dd>{{ item.value }}</dd>
+            </div>
+          }
+          @if (contact().years) {
+            <div>
+              <dt>Years of experience</dt>
+              <dd>{{ contact().years }}</dd>
+            </div>
+          }
+        </dl>
+      }
+      @if (contact().summary) {
+        <p class="profile-view__summary">{{ contact().summary }}</p>
+      }
+    </section>
+  }
+
+  @if (experiences().length) {
+    <section class="profile-view__block" aria-labelledby="view-experience">
+      <h2 id="view-experience" class="h5">Experience</h2>
+      <ol class="profile-view__timeline">
+        @for (experience of experiences(); track $index) {
+          <li>
+            <div class="profile-view__row">
+              <h3 class="h6">{{ experience.heading }}</h3>&ngsp;
+              @if (experience.period) {
+                <span class="profile-view__meta">{{ experience.period }}</span>
+              }
+            </div>
+            @if (experience.summary) {
+              <p>{{ experience.summary }}</p>
+            }
+            @if (experience.achievements.length) {
+              <ul>
+                @for (achievement of experience.achievements; track $index) {
+                  <li>{{ achievement }}</li>
+                }
+              </ul>
+            }
+          </li>
+        }
+      </ol>
+    </section>
+  }
+
+  @if (skillGroups().length || softSkills().length || coreCompetences().length) {
+    <section class="profile-view__block" aria-labelledby="view-skills">
+      <h2 id="view-skills" class="h5">Skills</h2>
+      @for (group of skillGroups(); track group.level) {
+        <div class="profile-view__group">
+          <h3 class="h6">{{ group.level }}</h3>
+          <ul class="profile-view__chips">
+            @for (name of group.names; track $index) {
+              <li>{{ name }}</li>
+            }
+          </ul>
+        </div>
+      }
+      @if (softSkills().length) {
+        <div class="profile-view__group">
+          <h3 class="h6">Soft skills</h3>
+          <ul class="profile-view__chips">
+            @for (name of softSkills(); track $index) {
+              <li>{{ name }}</li>
+            }
+          </ul>
+        </div>
+      }
+      @if (coreCompetences().length) {
+        <div class="profile-view__group">
+          <h3 class="h6">Core competences</h3>
+          <ul>
+            @for (item of coreCompetences(); track $index) {
+              <li>{{ item }}</li>
+            }
+          </ul>
+        </div>
+      }
+    </section>
+  }
+
+  @if (education().length || certificates().length) {
+    <section class="profile-view__block" aria-labelledby="view-education">
+      <h2 id="view-education" class="h5">Education and certificates</h2>
+      <ul class="profile-view__plain">
+        @for (entry of education(); track $index) {
+          <li>
+            <strong>{{ entry.heading }}</strong>&ngsp;
+            @if (entry.meta) { <span class="profile-view__meta">{{ entry.meta }}</span> }
+          </li>
+        }
+        @for (entry of certificates(); track $index) {
+          <li>
+            <strong>{{ entry.heading }}</strong>&ngsp;
+            @if (entry.meta) { <span class="profile-view__meta">{{ entry.meta }}</span> }
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  @if (hasPreferences()) {
+    <section class="profile-view__block" aria-labelledby="view-preferences">
+      <h2 id="view-preferences" class="h5">Job preferences</h2>
+      @if (preferredTitles().length) {
+        <div class="profile-view__group">
+          <h3 class="h6">Preferred job titles</h3>
+          <ul class="profile-view__chips">
+            @for (name of preferredTitles(); track $index) { <li>{{ name }}</li> }
+          </ul>
+        </div>
+      }
+      @if (preferredLocations().length) {
+        <div class="profile-view__group">
+          <h3 class="h6">Preferred locations</h3>
+          <ul class="profile-view__chips">
+            @for (name of preferredLocations(); track $index) { <li>{{ name }}</li> }
+          </ul>
+        </div>
+      }
+      @if (languages().length) {
+        <div class="profile-view__group">
+          <h3 class="h6">Languages</h3>
+          <ul class="profile-view__chips">
+            @for (name of languages(); track $index) { <li>{{ name }}</li> }
+          </ul>
+        </div>
+      }
+      @if (additionalInformations().length) {
+        <div class="profile-view__group">
+          <h3 class="h6">Additional information</h3>
+          <ul>
+            @for (item of additionalInformations(); track $index) { <li>{{ item }}</li> }
+          </ul>
+        </div>
+      }
+    </section>
+  }
+
+  @if (otherData().length) {
+    <details class="profile-view__block profile-view__other">
+      <summary>Other data ({{ otherData().length }})</summary>
+      @for (entry of otherData(); track entry.label) {
+        <h3 class="h6">{{ entry.label }}</h3>
+        <pre>{{ entry.value }}</pre>
+      }
+    </details>
+  }
+</div>

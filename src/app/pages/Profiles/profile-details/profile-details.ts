@@ -5,11 +5,12 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { EMPTY, catchError, switchMap, tap } from 'rxjs';
 import { TipApi } from '../../../core/api/tip-api';
 import { ProfileVersionDetail } from '../../../core/models/tailored-cv';
+import { ProfileView } from '../../profile/profile-view/profile-view';
 
 type DetailState = 'loading' | 'loaded' | 'not-found' | 'error';
 
 @Component({
-  imports: [RouterLink],
+  imports: [ProfileView, RouterLink],
   selector: 'app-profile-details',
   styleUrl: './profile-details.scss',
   templateUrl: './profile-details.html',
@@ -58,34 +59,4 @@ export class ProfileDetails implements OnInit {
       )
       .subscribe();
   }
-
-  protected profileDataEntries(): { key: string; label: string; value: string }[] {
-    const data = this.detail()?.data;
-    if (!data) {
-      return [];
-    }
-
-    return Object.entries(data).map(([key, value]) => ({
-      key,
-      label: humanizeKey(key),
-      value: formatValue(value),
-    }));
-  }
-}
-
-function humanizeKey(key: string): string {
-  return key
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .replace(/[_-]+/g, ' ')
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function formatValue(value: unknown): string {
-  if (value === null || value === undefined || value === '') {
-    return '—';
-  }
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-    return String(value);
-  }
-  return JSON.stringify(value, null, 2) ?? String(value);
 }

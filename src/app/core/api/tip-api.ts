@@ -174,7 +174,7 @@ export class TipApi {
     label: string,
     output_language: string,
   ): Observable<ProfileVersionDetail> {
-    return this.http.put<ProfileVersionDetail>(
+    return this.http.patch<ProfileVersionDetail>(
       `${this.baseUrl}/profiles/${encodeURIComponent(id)}`,
       { data, label, output_language },
     );
@@ -210,12 +210,14 @@ export class TipApi {
     });
   }
 
-  updateProfile(data: UserProfile['data'], label: string, output_language: string): Observable<UserProfile> {
-    return this.http.put<UserProfile>(`${this.baseUrl}/profile`, { data, label, output_language });
+  updateProfile(id: string, data: UserProfile['data'], label: string, output_language: string): Observable<UserProfile> {
+    return this.http.patch<UserProfile>(`${this.baseUrl}/profile/${encodeURIComponent(id)}`, { data, label, output_language });
   }
 
-  createProfileSession(): Observable<ProfileSession> {
-    return this.http.post<ProfileSession>(`${this.baseUrl}/profile/sessions`, {});
+  createProfileSession(outputLanguage: string): Observable<ProfileSession> {
+    return this.http.post<ProfileSession>(`${this.baseUrl}/profile/sessions`, {
+      output_language: outputLanguage,
+    });
   }
 
   uploadProfileFile(sessionId: string, file: File): Observable<unknown> {

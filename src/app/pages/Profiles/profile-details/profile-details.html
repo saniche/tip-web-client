@@ -27,18 +27,6 @@
       </div>
     </article>
 
-    <section class="profile-details__data" aria-labelledby="profile-data-heading">
-      <h2 id="profile-data-heading">Profile information</h2>
-      @for (entry of profileDataEntries(); track entry.key) {
-        <article class="card">
-          <div class="card-body">
-            <h3 class="h6 card-title">{{ entry.label }}</h3>
-            <pre class="mb-0 profile-details__value">{{ entry.value }}</pre>
-          </div>
-        </article>
-      } @empty {
-        <p>No profile information is available.</p>
-      }
-    </section>
+    <app-profile-view [data]="profile.data ?? {}" />
   }
 </section>

@@ -36,4 +36,33 @@ describe('StringListComponent', () => {
     removeButton.click();
     expect(emitted.at(-1)).toEqual(['Strategic planning', '']);
   });
+
+  it('shows short values as removable chips and adds trimmed, unique entries with Enter', async () => {
+    await TestBed.configureTestingModule({ imports: [StringListComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(StringListComponent);
+    fixture.componentRef.setInput('title', 'Languages');
+    fixture.componentRef.setInput('variant', 'chips');
+    fixture.componentRef.setInput('items', ['English']);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const emitted: string[][] = [];
+    fixture.componentInstance.itemsChange.subscribe((items) => emitted.push(items));
+
+    expect(Array.from(root.querySelectorAll('.string-chips__chip')).map((chip) => chip.textContent!.replace('×', '').trim())).toEqual(['English']);
+
+    const input = root.querySelector<HTMLInputElement>('input[aria-label="Add Languages"]')!;
+    input.value = '  French ';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }));
+    expect(emitted.at(-1)).toEqual(['English', 'French']);
+    expect(input.value).toBe('');
+
+    input.value = 'english';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }));
+    input.value = '   ';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }));
+    expect(emitted).toHaveLength(1);
+
+    root.querySelector<HTMLButtonElement>('[aria-label="Remove Languages English"]')!.click();
+    expect(emitted.at(-1)).toEqual([]);
+  });
 });

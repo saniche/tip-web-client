@@ -43,6 +43,7 @@ describe('primary navigation', () => {
     fixture.detectChanges();
     const router = TestBed.inject(Router);
     await router.navigateByUrl('/dashboard');
+    const navigate = vi.spyOn(router, 'navigateByUrl');
     fixture.detectChanges();
     const root = fixture.nativeElement as HTMLElement;
     const trigger = root.querySelector<HTMLButtonElement>('[data-area="tailoring"] button')!;
@@ -54,21 +55,21 @@ describe('primary navigation', () => {
 
     openTailoring();
     root.querySelector<HTMLAnchorElement>('a[href="/tailoring-session"]')!.click();
-    await fixture.whenStable();
+    await navigate.mock.results[navigate.mock.results.length - 1].value;
     fixture.detectChanges();
     expect(router.url).toBe('/tailoring-session');
     expect(root.querySelector('.navigation__area.is-active')?.getAttribute('data-area')).toBe('tailoring');
 
     openTailoring();
     root.querySelector<HTMLAnchorElement>('a[href="/tailored-cvs"]')!.click();
-    await fixture.whenStable();
+    await navigate.mock.results[navigate.mock.results.length - 1].value;
     fixture.detectChanges();
     expect(router.url).toBe('/tailored-cvs');
 
     isAuthenticated.mockReturnValue(false);
     openTailoring();
     root.querySelector<HTMLAnchorElement>('a[href="/tailoring-session"]')!.click();
-    await fixture.whenStable();
+    await navigate.mock.results[navigate.mock.results.length - 1].value;
     expect(router.url).toBe('/auth?returnUrl=%2Ftailoring-session');
   }, 10_000);
 
